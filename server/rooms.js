@@ -67,12 +67,13 @@ export class Room {
     return this.players.length >= 2;
   }
 
-  addPlayer(name, ws) {
+  addPlayer(name, ws, tgId = null) {
     if (this.full) return null;
     const seat = this.players.length;
     const player = {
       token: crypto.randomBytes(16).toString('hex'),
       name: cleanName(name, seat),
+      tgId,
       seat,
       ws,
       online: true,

@@ -58,10 +58,15 @@ export class Board {
     const availW = wrap.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
     // Bo'yi bo'yicha ekranning qolgan qismidan foydalanamiz (kichik ekranda ham to'liq ko'rinsin)
     const top = wrap.getBoundingClientRect().top + window.scrollY;
-    // Tor ekranda taxta balandligini cheklaymiz — zar tugmasi ham ko'rinib tursin
+    // Telegram ichida balandlikni webview beradi (--app-height), aks holda oyna balandligi
+    const cssHeight = parseFloat(
+      getComputedStyle(document.documentElement).getPropertyValue('--app-height'),
+    );
+    const viewH = cssHeight || window.innerHeight;
+    // Tor ekranda taxta balandligini cheklaymiz — boshqaruv tugmalari ham ko'rinib tursin
     const budget = window.innerWidth <= 900
-      ? window.innerHeight * 0.62
-      : window.innerHeight - Math.min(top, 220) - 40;
+      ? viewH * 0.62
+      : viewH - Math.min(top, 220) - 40;
     const availH = Math.max(340, budget);
 
     const pad = 10;

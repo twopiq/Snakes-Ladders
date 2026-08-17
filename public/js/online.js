@@ -122,19 +122,28 @@ export class OnlineClient {
     return true;
   }
 
+  /** Telegram imzosi kabi qo'shimcha maydonlar (agar berilgan bo'lsa). */
+  ident() {
+    try {
+      return this.on.identity?.() || {};
+    } catch {
+      return {};
+    }
+  }
+
   async create({ name, mapId, rules }) {
     await this.connect();
-    this.send({ t: 'create', name, mapId, rules });
+    this.send({ t: 'create', name, mapId, rules, ...this.ident() });
   }
 
   async join({ code, name }) {
     await this.connect();
-    this.send({ t: 'join', code: String(code).toUpperCase(), name });
+    this.send({ t: 'join', code: String(code).toUpperCase(), name, ...this.ident() });
   }
 
   async quick({ name, mapId, rules }) {
     await this.connect();
-    this.send({ t: 'quick', name, mapId, rules });
+    this.send({ t: 'quick', name, mapId, rules, ...this.ident() });
   }
 
   /** Sahifa yangilangach oldingi o'yinga qaytishga urinish. */

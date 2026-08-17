@@ -582,3 +582,35 @@ canvas { display: block; border-radius: 12px; touch-action: manipulation; }
   .panel { padding: 14px; }
   .dice { width: 70px; height: 70px; }
 }
+
+/* ---------- Telegram Mini App ---------- */
+/* Telegram ichida ochilganda: o'z sarlavhasi bor, pastda esa MainButton turadi. */
+body.tg .app {
+  padding-top: 0;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+}
+
+body.tg .topbar {
+  padding: 8px 4px;
+  padding-top: calc(8px + var(--tg-safe-area-inset-top, 0px));
+}
+
+body.tg .brand small { display: none; }
+body.tg .brand strong { font-size: 15px; }
+body.tg .brand-mark { font-size: 24px; }
+
+/* Zar tugmasi Telegram'ning pastki asosiy tugmasiga chiqariladi */
+body.tg .roll-btn { display: none; }
+body.tg .dice-box { padding: 10px; }
+body.tg .hint { min-height: 0; }
+
+/* Telegram webview'ida balandlik viewportStableHeight orqali beriladi */
+body.tg .board-wrap { min-height: 260px; }
+
+body.tg .side-actions { margin-bottom: 8px; }
+
+/* Telefonda modal oynalar pastdan chiqqani qulayroq */
+@media (max-width: 520px) {
+  body.tg .modal { border-radius: 18px; padding: 18px; }
+  body.tg .modal .code-big { font-size: 32px; }
+}

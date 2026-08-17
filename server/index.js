@@ -3,6 +3,7 @@ import { WebSocketServer } from 'ws';
 
 import { serveStatic } from './static.js';
 import { RoomStore } from './rooms.js';
+import { telegramConfig, telegramEnabled, resolveIdentity } from './telegram.js';
 import { MAPS } from '../public/shared/maps.js';
 
 const PORT = Number(process.env.PORT || 3000);
@@ -15,6 +16,9 @@ const server = http.createServer((req, res) => {
 
   if (url.pathname === '/api/health') {
     return json(res, 200, { ok: true, rooms: store.rooms.size, queue: store.queue.length, uptime: process.uptime() });
+  }
+  if (url.pathname === '/api/config') {
+    return json(res, 200, { telegram: telegramConfig() });
   }
   if (url.pathname === '/api/maps') {
     return json(res, 200, MAPS.map((m) => ({
@@ -65,21 +69,39 @@ wss.on('connection', (ws) => {
   });
 });
 
+/**
+ * O'yinchi kimligini aniqlaydi. Telegram ichidan kelgan bo'lsa, ism imzolangan
+ * ma'lumotdan olinadi — ya'ni boshqaning ismi bilan kirib bo'lmaydi.
+ * Xato bo'lsa mijozga xabar yuboriladi va null qaytadi.
+ */
+function identify(ws, msg) {
+  const ident = resolveIdentity({ initData: msg.initData, name: msg.name });
+  if (msg.initData && telegramEnabled && !ident.verified) {
+    send(ws, { t: 'error', msg: 'Telegram tekshiruvidan o\'tmadi — ilovani qayta oching' });
+    return null;
+  }
+  return ident;
+}
+
 function handle(ws, msg) {
   switch (msg.t) {
     case 'create': {
-      const room = store.create({ name: msg.name, mapId: msg.mapId, rules: msg.rules });
-      const player = room.addPlayer(msg.name, ws);
+      const ident = identify(ws, msg);
+      if (!ident) return;
+      const room = store.create({ name: ident.name, mapId: msg.mapId, rules: msg.rules });
+      const player = room.addPlayer(ident.name, ws, ident.tgId);
       bind(ws, room, player);
       send(ws, { t: 'joined', code: room.code, seat: player.seat, token: player.token, room: room.snapshot() });
       break;
     }
 
     case 'join': {
+      const ident = identify(ws, msg);
+      if (!ident) return;
       const room = store.get(msg.code);
       if (!room) return send(ws, { t: 'error', msg: 'Bunday kodli xona topilmadi' });
       if (room.full) return send(ws, { t: 'error', msg: "Xona to'lgan (2/2)" });
-      const player = room.addPlayer(msg.name, ws);
+      const player = room.addPlayer(ident.name, ws, ident.tgId);
       bind(ws, room, player);
       send(ws, { t: 'joined', code: room.code, seat: player.seat, token: player.token, room: room.snapshot() });
       broadcastRoom(room);
@@ -104,15 +126,17 @@ function handle(ws, msg) {
 
     case 'quick': {
       // Tezkor o'yin: navbatdagi raqib bilan avtomatik juftlash
+      const ident = identify(ws, msg);
+      if (!ident) return;
       store.queue = store.queue.filter((q) => q.ws.readyState === 1 && q.ws !== ws);
       const mate = store.queue.shift();
       if (!mate) {
-        store.queue.push({ ws, name: msg.name, mapId: msg.mapId });
+        store.queue.push({ ws, name: ident.name, mapId: msg.mapId, tgId: ident.tgId });
         return send(ws, { t: 'queued' });
       }
       const room = store.create({ mapId: mate.mapId || msg.mapId, rules: msg.rules });
-      const p1 = room.addPlayer(mate.name, mate.ws);
-      const p2 = room.addPlayer(msg.name, ws);
+      const p1 = room.addPlayer(mate.name, mate.ws, mate.tgId);
+      const p2 = room.addPlayer(ident.name, ws, ident.tgId);
       bind(mate.ws, room, p1);
       bind(ws, room, p2);
       // Ikkalasi ham to'liq holatni oladi — o'yin shu zahoti boshlanadi

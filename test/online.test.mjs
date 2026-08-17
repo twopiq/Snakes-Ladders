@@ -9,12 +9,14 @@ import { spawn } from 'node:child_process';
 import { setTimeout as sleep } from 'node:timers/promises';
 import WebSocket from 'ws';
 
+import { makeInitData, TEST_BOT_TOKEN } from './helpers.mjs';
+
 const PORT = 3999 + Math.floor(Math.random() * 300);
 let server;
 
-async function startServer() {
+async function startServer(env = {}) {
   server = spawn(process.execPath, ['server/index.js'], {
-    env: { ...process.env, PORT: String(PORT) },
+    env: { ...process.env, PORT: String(PORT), ...env },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   for (let i = 0; i < 60; i++) {
@@ -193,6 +195,37 @@ test("noto'g'ri kod bilan qo'shilib bo'lmaydi", async (t) => {
   const err = await a.take('error');
   assert.match(err.msg, /topilmadi/);
   a.close();
+});
+
+test('Telegram: imzolangan o\'yinchi ismi Telegram profilidan olinadi', async (t) => {
+  await startServer({ BOT_TOKEN: TEST_BOT_TOKEN, BOT_USERNAME: 'ilonlar_bot', APP_SHORT_NAME: 'oyin' });
+  t.after(() => server.kill());
+
+  const cfg = await (await fetch(`http://127.0.0.1:${PORT}/api/config`)).json();
+  assert.equal(cfg.telegram.enabled, true);
+  assert.equal(cfg.telegram.inviteBase, 'https://t.me/ilonlar_bot/oyin?startapp=');
+
+  const a = client();
+  const b = client();
+  await Promise.all([a.open(), b.open()]);
+
+  // Ism "Yolg'onchi" deb yuborilsa ham, Telegram imzosidagi ism ustun turadi
+  a.send({
+    t: 'create',
+    name: "Yolg'onchi",
+    mapId: 'tezkor120',
+    initData: makeInitData({ user: { id: 7, first_name: 'Ali', username: 'ali' } }),
+  });
+  const joinedA = await a.take('joined');
+  assert.equal(joinedA.room.players[0].name, 'Ali');
+
+  // Buzilgan imzo bilan kirish mumkin emas
+  b.send({ t: 'join', code: joinedA.code, name: 'Vali', initData: makeInitData({ token: 'soxta:token' }) });
+  const err = await b.take('error');
+  assert.match(err.msg, /Telegram/);
+
+  a.close();
+  b.close();
 });
 
 test('statik sahifa va API javob beradi', async (t) => {

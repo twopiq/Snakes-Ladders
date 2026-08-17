@@ -5,6 +5,10 @@ import { createGame, applyRoll, rollDice, DEFAULT_RULES, PLAYER_COLORS, MIN_PLAY
 import { GameView, escapeHtml } from './game-view.js';
 import { OnlineClient } from './online.js';
 import { sound } from './sound.js';
+import {
+  isTelegram, initTelegram, loadConfig, tgUserName, initData, startParam,
+  shareRoom, showBackButton, setMainButton, setClosingConfirmation,
+} from './telegram.js';
 import { $, $$, showScreen, toast, showModal, hideModal } from './ui.js';
 
 const RULE_INFO = [
@@ -34,6 +38,19 @@ const S = {
   state: null,
 };
 
+/** Ekranni almashtiradi va Telegram'ning "orqaga" tugmasini moslaydi. */
+function goto(screenId) {
+  showScreen(screenId);
+  showBackButton(screenId !== 'screen-menu');
+  if (screenId !== 'screen-game') setMainButton({ show: false });
+}
+
+/** Telegram'dagi "orqaga" tugmasi bosilganda. */
+function handleBack() {
+  if (S.mode) leaveGame();
+  else goto('screen-menu');
+}
+
 // ---------------------------------------------------------------- ko'rinish
 const view = new GameView({
   onRoll: () => (S.mode === 'offline' ? offlineRoll() : net.roll()),
@@ -42,10 +59,25 @@ const view = new GameView({
   onChat: (text) => {
     if (S.mode === 'online') net.chat(text);
   },
+  // Telefonda qulay bo'lishi uchun zar tugmasini Telegram'ning pastki tugmasiga ham chiqaramiz
+  onControls: ({ canRoll, label, finished }) => {
+    setMainButton({
+      show: true,
+      text: finished ? "O'yin tugadi" : label,
+      enabled: canRoll,
+      onClick: () => {
+        if (!view.canRoll()) return;
+        if (S.mode === 'offline') offlineRoll();
+        else net.roll();
+      },
+    });
+  },
 });
 
 // ---------------------------------------------------------------- onlayn mijoz
 const net = new OnlineClient({
+  // Telegram ichida bo'lsak — imzolangan ma'lumot, server ismni o'zi tekshirib oladi
+  identity: () => ({ initData: initData() }),
   onStatus: (text, kind) => setConn(text, kind),
   onJoined: (msg) => {
     S.online.mySeat = msg.seat;
@@ -86,7 +118,8 @@ const net = new OnlineClient({
   onLeft: () => {
     S.online.room = null;
     S.online.inGame = false;
-    showScreen('screen-menu');
+    setClosingConfirmation(false);
+    goto('screen-menu');
   },
   onError: (msg) => {
     hideModal();
@@ -98,7 +131,7 @@ const net = new OnlineClient({
 });
 
 // ---------------------------------------------------------------- boshlang'ich UI
-function init() {
+async function init() {
   renderMenuMaps();
   renderMapList($('#offlineMaps'), 'offline');
   renderMapList($('#onlineMaps'), 'online');
@@ -107,12 +140,9 @@ function init() {
   renderPlayerInputs();
 
   for (const btn of $$('[data-goto]')) {
-    btn.addEventListener('click', () => showScreen(btn.dataset.goto));
+    btn.addEventListener('click', () => goto(btn.dataset.goto));
   }
-  $('#brandBtn').addEventListener('click', () => {
-    if (S.mode) leaveGame();
-    else showScreen('screen-menu');
-  });
+  $('#brandBtn').addEventListener('click', handleBack);
 
   $('#playersMinus').addEventListener('click', () => changeCount(-1));
   $('#playersPlus').addEventListener('click', () => changeCount(1));
@@ -142,6 +172,31 @@ function init() {
   $('#overlay').addEventListener('click', (e) => {
     if (e.target.id === 'overlay') hideModal();
   });
+
+  await loadConfig();
+  initTelegram({ onBack: handleBack });
+
+  if (isTelegram()) {
+    const name = tgUserName();
+    if (name) {
+      nameInput.value = name;
+      nameInput.readOnly = true;
+      nameInput.title = 'Ism Telegram profilingizdan olinadi';
+      localStorage.setItem('il_name', name);
+    }
+  }
+
+  // Taklif havolasi orqali kirilgan bo'lsa — to'g'ridan-to'g'ri xonaga
+  const invited = startParam();
+  if (invited && invited.length === 4) {
+    net.clearSession();
+    S.mode = 'online';
+    goto('screen-online');
+    $('#joinCode').value = invited;
+    toast('Xonaga qo\'shilmoqda...');
+    net.join({ code: invited, name: myName() }).catch(() => toast('Serverga ulanib bo\'lmadi', 'bad'));
+    return;
+  }
 
   // Sahifa yangilangan bo'lsa, oldingi onlayn o'yinga qaytishga urinamiz
   if (net.session) {
@@ -233,7 +288,8 @@ function startOffline() {
   S.offline.config = { mapId: S.offline.mapId, players, rules: { ...S.offline.rules } };
   S.mode = 'offline';
   S.state = createGame(S.offline.config);
-  showScreen('screen-game');
+  goto('screen-game');
+  setClosingConfirmation(true);
   view.open({ state: S.state, mode: 'offline' });
 }
 
@@ -247,7 +303,7 @@ function offlineRoll() {
 
 function offlineRematch() {
   hideModal();
-  if (!S.offline.config) return showScreen('screen-offline');
+  if (!S.offline.config) return goto('screen-offline');
   S.state = createGame(S.offline.config);
   view.open({ state: S.state, mode: 'offline' });
 }
@@ -302,7 +358,8 @@ function applyRoom(room) {
   hideModal();
   if (!S.online.inGame) {
     S.online.inGame = true;
-    showScreen('screen-game');
+    goto('screen-game');
+    setClosingConfirmation(true);
     view.open({ state: room.state, mode: 'online', mySeat: S.online.mySeat, roomCode: room.code });
     for (const msg of room.chat || []) {
       view.addChat({ from: msg.from, text: msg.text, mine: msg.seat === S.online.mySeat });
@@ -324,16 +381,21 @@ function showWaitingRoom(room) {
     <div class="code-big" data-act="copy" title="Nusxalash">${room.code}</div>
     <p>Xarita: <b>${escapeHtml(getMap(room.mapId).name)}</b><br>O'yinchilar: ${rematchInfo} (${room.players.length}/2)</p>
     <div class="modal-actions">
-      <button class="primary" data-act="copy">Kodni nusxalash</button>
+      <button class="primary" data-act="invite">Do'stni chaqirish</button>
+      <button class="ghost" data-act="copy">Kodni nusxalash</button>
       <button class="ghost" data-act="cancel">Bekor qilish</button>
     </div>`, (act) => {
+    if (act === 'invite') {
+      const how = shareRoom(room.code);
+      if (how === 'clipboard') toast('Taklif havolasi nusxalandi');
+    }
     if (act === 'copy') {
       navigator.clipboard?.writeText(room.code).then(() => toast('Kod nusxalandi'), () => toast(`Kod: ${room.code}`));
     }
     if (act === 'cancel') {
       hideModal();
       net.leave();
-      showScreen('screen-online');
+      goto('screen-online');
     }
   });
 }
@@ -354,7 +416,9 @@ function leaveGame() {
   S.mode = null;
   S.state = null;
   hideModal();
-  showScreen('screen-menu');
+  setClosingConfirmation(false);
+  setMainButton({ show: false });
+  goto('screen-menu');
 }
 
 function setConn(text, kind) {

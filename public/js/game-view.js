@@ -7,6 +7,7 @@ import { Board } from './board.js';
 import { getMap } from '../shared/maps.js';
 import { stepPath } from '../shared/engine.js';
 import { sound } from './sound.js';
+import { haptic } from './telegram.js';
 import { $, toast, showModal, hideModal } from './ui.js';
 
 const PIPS = {
@@ -193,6 +194,7 @@ export class GameView {
         const speed = path.length > 8 ? 105 : 165;
         for (const cell of path) {
           sound.step();
+          haptic('light');
           await this.board.glide(ev.playerId, cell, speed, 'step');
         }
         break;
@@ -200,6 +202,7 @@ export class GameView {
 
       case 'ladder':
         sound.ladder();
+        haptic('success');
         await this.board.flash(ev.from, 220);
         await this.board.glide(ev.playerId, ev.to, 620);
         toast(`${player?.name || ''} narvondan ${ev.from} → ${ev.to} ko'tarildi 🪜`);
@@ -207,6 +210,7 @@ export class GameView {
 
       case 'snake':
         sound.snake();
+        haptic('error');
         await this.board.flash(ev.from, 220);
         await this.board.glide(ev.playerId, ev.to, 700);
         toast(`${player?.name || ''} ilonga tushdi: ${ev.from} → ${ev.to} 🐍`, 'bad');
@@ -214,12 +218,14 @@ export class GameView {
 
       case 'bonus':
         sound.bonus();
+        haptic('success');
         toast(`${player?.name || ''} bonus katak — qo'shimcha zar! ★`);
         await wait(220);
         break;
 
       case 'trap':
         sound.trap();
+        haptic('warning');
         toast(`${player?.name || ''} tuzoqqa tushdi — bir yurish yo'q ✖`, 'bad');
         await wait(220);
         break;
@@ -231,6 +237,7 @@ export class GameView {
 
       case 'finish':
         sound.win();
+        haptic('success');
         toast(`🏁 ${player?.name || ''} — ${ev.rank}-o'rin!`);
         await wait(400);
         break;
@@ -243,6 +250,7 @@ export class GameView {
   rollDiceAnim(value) {
     return new Promise((resolve) => {
       sound.dice();
+      haptic('medium');
       this.el.dice.classList.add('rolling');
       let n = 0;
       const timer = setInterval(() => {
@@ -295,6 +303,13 @@ export class GameView {
       this.el.rollBtn.textContent = 'Zar tashlash';
       this.el.rollHint.textContent = this.mode === 'offline' ? `Navbat: ${cur.name}` : 'Sizning navbatingiz!';
     }
+
+    // tashqi boshqaruv (Telegram pastki tugmasi) uchun holat
+    this.on.onControls?.({
+      canRoll: can,
+      label: this.el.rollBtn.textContent,
+      finished: state.status === 'finished',
+    });
 
     // o'yinchilar
     this.el.players.innerHTML = '';
