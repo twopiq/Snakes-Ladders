@@ -187,3 +187,85 @@ test('API: taklif havolasi, biriktirish va mukofot', async (t) => {
   const self = await (await post('/api/shop/profile', { initData: host, ref: 'r100' })).json();
   assert.equal(self.referral.confirmed, 3, 'o\'zgarmadi');
 });
+
+// ---------------------------------------------------------------- havolalar
+
+test('taklif havolasi: short name bo\'lsa startapp, bo\'lmasa start', async () => {
+  const run = (env) => new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, ['--input-type=module', '-e', `
+      const { referralLink, setBotUsername, telegramConfig } = await import('./server/telegram.js');
+      const before = referralLink('100');
+      setBotUsername('aniqlangan_bot');
+      console.log(JSON.stringify({
+        before, after: referralLink('100'), inviteBase: telegramConfig().inviteBase,
+      }));
+    `], { env: { ...process.env, BOT_TOKEN: TEST_BOT_TOKEN, ...env }, stdio: ['ignore', 'pipe', 'pipe'] });
+    let out = '';
+    child.stdout.on('data', (c) => { out += c; });
+    child.on('error', reject);
+    child.on('close', () => resolve(JSON.parse(out || '{}')));
+  });
+
+  const full = await run({ BOT_USERNAME: 'ilonlar_bot', APP_SHORT_NAME: 'oyin' });
+  assert.equal(full.before, 'https://t.me/ilonlar_bot/oyin?startapp=r100');
+
+  // Short name yo'q — oddiy bot havolasi ishlatiladi (u har doim ochiladi)
+  const noApp = await run({ BOT_USERNAME: 'ilonlar_bot', APP_SHORT_NAME: '' });
+  assert.equal(noApp.before, 'https://t.me/ilonlar_bot?start=r100');
+
+  // BOT_USERNAME umuman yozilmagan — bot ulangach o'z nomini o'zi beradi
+  const auto = await run({ BOT_USERNAME: '', APP_SHORT_NAME: '' });
+  assert.equal(auto.before, null, 'bot ulanmaguncha havola yo\'q');
+  assert.equal(auto.after, 'https://t.me/aniqlangan_bot?start=r100');
+  assert.equal(auto.inviteBase, 'https://t.me/aniqlangan_bot?start=');
+});
+
+test('API: taklif do\'stlar ekrani va o\'yin boshlanishida ham biriktiriladi', async (t) => {
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ref-api2-'));
+  const PORT = 4400 + Math.floor(Math.random() * 200);
+  const server = spawn(process.execPath, ['server/index.js'], {
+    env: {
+      ...process.env,
+      PORT: String(PORT), DATA_DIR: dataDir, BOT_TOKEN: TEST_BOT_TOKEN,
+      BOT_USERNAME: 'ilonlar_bot', DISABLE_BOT: '1',
+    },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  t.after(() => server.kill());
+
+  const base = `http://127.0.0.1:${PORT}`;
+  for (let i = 0; i < 60; i++) {
+    try { if ((await fetch(`${base}/api/health`)).ok) break; } catch { /* kutamiz */ }
+    await sleep(120);
+  }
+  const post = (p, body) => fetch(`${base}${p}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  });
+
+  const host = makeInitData({ user: { id: 300, first_name: 'Host' } });
+
+  // APP_SHORT_NAME yo'q — havola bot chati orqali beriladi, lekin baribir bor
+  const info = await (await post('/api/shop/referral', { initData: host })).json();
+  assert.equal(info.link, 'https://t.me/ilonlar_bot?start=r300');
+
+  // 1-do'st: do'kon so'rovi yo'qolgan, ref faqat "do'stlar" ekranidan keldi
+  const f1 = makeInitData({ user: { id: 301, first_name: 'Birinchi' } });
+  const attached = await (await post('/api/shop/referral', { initData: f1, ref: 'r300' })).json();
+  assert.equal(attached.ref.ok, true);
+  assert.equal(attached.ref.final, true, 'mijoz saqlangan havolani o\'chirishi mumkin');
+
+  // 2-do'st: ref faqat o'yin boshlanganda yetib keldi — baribir hisoblanadi
+  const f2 = makeInitData({ user: { id: 302, first_name: 'Ikkinchi' } });
+  await post('/api/shop/played', { initData: f2, ref: 'r300' });
+
+  // Takroriy yuborish ikkinchi marta hisoblanmaydi
+  const repeat = await (await post('/api/shop/profile', { initData: f2, ref: 'r300' })).json();
+  assert.equal(repeat.ref.ok, false);
+  assert.equal(repeat.ref.error, 'already');
+
+  await post('/api/shop/played', { initData: f1 });
+
+  const after = await (await post('/api/shop/referral', { initData: host })).json();
+  assert.equal(after.referral.confirmed, 2, 'ikkala do\'st ham hisobga tushdi');
+  assert.equal(after.referral.pending, 0);
+});

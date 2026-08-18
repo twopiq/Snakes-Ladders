@@ -45,8 +45,9 @@ Render'da: **Dashboard → xizmatingiz → Environment → Add Environment Varia
 | Kalit | Qiymat | Nima uchun |
 |---|---|---|
 | `BOT_TOKEN` | BotFather bergan token | O'yinchi haqiqatan o'sha Telegram foydalanuvchisi ekanini tekshirish |
-| `BOT_USERNAME` | `ilonlar_narvonlar_bot` | Taklif havolasini yasash uchun |
-| `APP_SHORT_NAME` | `oyin` | 2-bosqichdagi "Short name" |
+| `BOT_USERNAME` | `ilonlar_narvonlar_bot` | Taklif havolasini yasash uchun (bot ulangan bo'lsa server uni o'zi ham topadi) |
+| `APP_SHORT_NAME` | `oyin` | 2-bosqichdagi "Short name". Berilmasa havolalar bot chati orqali ochiladi |
+| `DATA_DIR` | doimiy disk yo'li | **Xaridlar va do'st hisobi shu yerda saqlanadi** — berilmasa har deploydan keyin o'chadi |
 
 Saqlagach Render xizmatni qayta ishga tushiradi. Tekshirish:
 
@@ -120,8 +121,13 @@ eski JS faylni keshdan olgan, HTML esa yangi. Server endi kod fayllarini
 ilovani butunlay yopib qayta oching yoki Telegram sozlamalarida keshni tozalang.
 Qaysi versiya ishlayotganini "?" tugmasi ostidagi oynada ko'rish mumkin.
 
-**Taklif havolasi oddiy saytga olib boradi** — `BOT_USERNAME` yoki `APP_SHORT_NAME`
-sozlanmagan; `/api/config` dagi `inviteBase` bo'sh bo'lsa shunday bo'ladi.
+**Taklif havolasi oddiy saytga olib boradi** — `BOT_USERNAME` sozlanmagan va bot ham
+ulanmagan; `/api/config` dagi `inviteBase` bo'sh bo'lsa shunday bo'ladi.
+
+**Do'st chaqirdim, lekin hisob 0** — `/admin` dagi "Telegram holati" bo'limiga qarang.
+Ko'p hollarda sabab `DATA_DIR` sozlanmagani: Render xizmatni qayta ishga tushirganda
+butun hisob o'chib ketadi. Boshqa sabablar va tekshirish tartibi
+[docs/monetizatsiya.md](monetizatsiya.md) faylida.
 
 **Render bepul tarifda sekin ochiladi** — xizmat 15 daqiqadan keyin uxlaydi.
 Starter tarifga o'tish yoki har 10 daqiqada `/api/health` ga so'rov yuborish yordam beradi.

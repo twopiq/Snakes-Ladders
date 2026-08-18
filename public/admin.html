@@ -49,6 +49,34 @@
       </div>
 
       <div class="panel" style="margin-top:16px">
+        <h3>🎁 Bepul berish</h3>
+        <p class="muted">
+          Telegram foydalanuvchisiga do'kondagi istalgan ko'rinishni yulduzsiz berasiz —
+          mukofot ko'rinishlarini ham. Pastdagi ro'yxatdan o'yinchini bossangiz, ID o'zi to'ladi.
+        </p>
+        <div class="gift-form">
+          <input class="text-input" id="giftId" placeholder="Telegram ID (masalan 123456789)" inputmode="numeric" autocomplete="off" />
+          <select class="text-input" id="giftItem"></select>
+          <button class="primary" id="giftBtn" type="button">Bepul berish</button>
+        </div>
+        <label class="gift-check">
+          <input type="checkbox" id="giftNotify" checked /> Telegram orqali xabar yuborilsin
+        </label>
+        <p class="conn-status" id="giftMsg"></p>
+      </div>
+
+      <div class="panel" style="margin-top:16px">
+        <h3>O'yinchilar <small class="muted" id="userTotal"></small></h3>
+        <input class="text-input" id="userSearch" placeholder="Ism yoki ID bo'yicha qidirish" autocomplete="off" />
+        <div class="user-list" id="userList"></div>
+      </div>
+
+      <div class="panel" style="margin-top:16px">
+        <h3>So'nggi sovg'alar</h3>
+        <div class="purchases" id="gifts"></div>
+      </div>
+
+      <div class="panel" style="margin-top:16px">
         <h3>So'nggi xaridlar</h3>
         <p class="muted">Yulduzlarni qaytarish Telegram orqali amalga oshiriladi va narsa hisobdan olib qo'yiladi.</p>
         <div class="purchases" id="purchases"></div>

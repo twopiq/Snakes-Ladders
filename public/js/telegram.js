@@ -109,6 +109,35 @@ export function refParam() {
   return raw && /^r\d{3,20}$/i.test(raw) ? raw.toLowerCase() : null;
 }
 
+const REF_KEY = 'il_pending_ref';
+
+/**
+ * Kutilayotgan taklif havolasi.
+ *
+ * Havola faqat ilova birinchi ochilganda keladi. Avval u bitta so'rovda
+ * yuborilardi — o'sha so'rov yo'lda yo'qolsa (tarmoq uzildi, server uxlab
+ * qolgan edi) taklif butunlay yo'qolardi. Endi uni saqlab qo'yamiz va server
+ * "biriktirdim" yoki "endi kech" degunicha har so'rovda yuboraveramiz.
+ */
+export function pendingRef() {
+  const fresh = refParam();
+  if (fresh) {
+    try { localStorage.setItem(REF_KEY, fresh); } catch { /* xotira yopiq */ }
+    return fresh;
+  }
+  try { return localStorage.getItem(REF_KEY) || null; } catch { return null; }
+}
+
+export function clearPendingRef() {
+  try { localStorage.removeItem(REF_KEY); } catch { /* xotira yopiq */ }
+}
+
+/** Server javobidagi natijaga qarab saqlangan havolani tozalaydi. */
+export function settleRef(result) {
+  if (result && result.final) clearPendingRef();
+  return result;
+}
+
 /** Xona uchun ulashsa bo'ladigan havola. */
 export function inviteLink(code) {
   if (config.inviteBase) return `${config.inviteBase}${code}`;

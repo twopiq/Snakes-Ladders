@@ -7,13 +7,13 @@
  */
 
 import { REFERRAL_TIERS, getItem, RARITY } from '../shared/cosmetics.js';
-import { isTelegram, initData, shareRoom, haptic, tgConfig } from './telegram.js';
-import { canPromote, openTelegramApp } from './promo.js';
+import { isTelegram, initData, shareRoom, haptic, tgConfig, pendingRef, settleRef } from './telegram.js';
+import { canPromote, openTelegramApp, telegramAppLink } from './promo.js';
 import { $, toast } from './ui.js';
 import { escapeHtml } from './game-view.js';
 import { drawItemPreview } from './preview.js';
 
-const state = { confirmed: 0, pending: 0, rewards: [], link: null, loaded: false };
+const state = { confirmed: 0, pending: 0, rewards: [], link: null, tgId: null, loaded: false };
 
 export const referralState = () => state;
 
@@ -24,11 +24,18 @@ export async function loadFriends() {
     const res = await fetch('/api/shop/referral', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ initData: initData() }),
+      // Bu ekran ham taklifni biriktirishga urinadi — do'kon so'rovi yo'qolgan bo'lsa
+      body: JSON.stringify({ initData: initData(), ref: pendingRef() }),
     });
     if (!res.ok) return state;
     const data = await res.json();
-    Object.assign(state, data.referral, { link: data.link, loaded: true });
+    settleRef(data.ref);
+    Object.assign(state, data.referral, {
+      tgId: data.tgId,
+      // Server havolani yasay olmasa (bot nomi noma'lum) — mijoz tomonda urinib ko'ramiz
+      link: data.link || telegramAppLink(`r${data.tgId}`),
+      loaded: true,
+    });
   } catch {
     /* jim qolamiz — ekran baribir ochiladi */
   }
@@ -42,7 +49,8 @@ export async function reportPlayed() {
     await fetch('/api/shop/played', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ initData: initData() }),
+      // Taklif hali biriktirilmagan bo'lsa — oxirgi imkoniyat
+      body: JSON.stringify({ initData: initData(), ref: pendingRef() }),
     });
   } catch {
     /* muhim emas — keyingi o'yinda qayta urinadi */
@@ -99,10 +107,18 @@ function renderFriendsInner(root) {
       <p class="muted">${next
         ? `Keyingi mukofotgacha yana <b>${next.count - state.confirmed}</b> ta do'st`
         : 'Barcha mukofotlar ochildi — rahmat! 🎉'}</p>
-      <button class="primary big" data-invite="1">Do'stni chaqirish</button>
-      <button class="ghost big" data-copy="1">Havolani nusxalash</button>
+      ${state.link ? `
+        <button class="primary big" data-invite="1">Do'stni chaqirish</button>
+        <button class="ghost big" data-copy="1">Havolani nusxalash</button>
+        <p class="link-box">${escapeHtml(state.link)}</p>
+      ` : `
+        <p class="conn-status bad">Taklif havolasi tayyor emas: serverda bot nomi
+        (<code>BOT_USERNAME</code>) sozlanmagan. Admin panelidagi "Telegram holati"
+        bo'limiga qarang.</p>
+      `}
       <p class="muted" style="margin-top:12px">
         Do'st havolangiz orqali kirib, kamida bitta o'yin boshlasa — hisobga qo'shiladi.
+        Havolani ochgan, lekin hali o'ynamaganlar "kutilmoqda" da turadi.
       </p>
     </div>
     ${rewardsHtml(unlocked)}`;

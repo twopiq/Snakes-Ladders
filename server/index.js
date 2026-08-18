@@ -5,7 +5,7 @@ import crypto from 'node:crypto';
 
 import { serveStatic, BUILD_ID } from './static.js';
 import { RoomStore } from './rooms.js';
-import { telegramConfig, telegramEnabled, resolveIdentity, verifyInitData, botToken, reasonText } from './telegram.js';
+import { telegramConfig, telegramEnabled, resolveIdentity, verifyInitData, botToken, reasonText, referralLink } from './telegram.js';
 import { Store } from './store.js';
 import { createBot } from './bot.js';
 import { MAPS } from '../public/shared/maps.js';
@@ -368,7 +368,25 @@ function shopUser(body) {
   if (!telegramEnabled) return { ok: false, error: 'Do\'kon faqat Telegram ichida ishlaydi' };
   const res = verifyInitData(body.initData);
   if (!res.ok) return { ok: false, error: reasonText(res.reason), reason: res.reason };
+  shop.touch(res.user.id, res.user.name);
   return { ok: true, tgId: res.user.id, name: res.user.name };
+}
+
+/**
+ * Taklif havolasini biriktiradi.
+ *
+ * Mijoz `ref` ni bitta emas, bir necha so'rovda yuboradi (do'kon, do'stlar, o'yin
+ * boshlanishi) — chunki bitta so'rov yo'lda yo'qolsa taklif butunlay yo'qoladi.
+ * Takroriy urinish zararsiz: allaqachon biriktirilgan bo'lsa "already" qaytadi.
+ *
+ * Qaytadi: { tried, ok, error } yoki null (havola yo'q edi).
+ */
+function attachRef(body, tgId) {
+  const ref = parseRefParam(body.ref);
+  if (!ref) return null;
+  const res = shop.attachReferral(tgId, ref);
+  // "final" — mijoz saqlangan havolani o'chirib tashlashi mumkin (qayta urinish behuda)
+  return { tried: true, ok: res.ok, error: res.error || null, final: true };
 }
 
 async function handleApi(req, res, url) {
@@ -385,12 +403,21 @@ async function handleApi(req, res, url) {
       return json(res, 200, {
         items: catalogForClient(),
         stats: shop.stats(),
+        users: shop.userList({ limit: 200 }),
         starsEnabled: Boolean(bot),
+        storage: {
+          file: shop.file,
+          // DATA_DIR berilmasa fayl loyiha ichida turadi — Render'da har deploydan keyin o'chadi
+          persistent: Boolean(process.env.DATA_DIR),
+        },
         telegram: {
           tokenSet: telegramEnabled,
-          botUsername: linked,                       // token haqiqatda qaysi botniki
-          configuredUsername: cfg.botUsername || null, // BOT_USERNAME nima deb yozilgan
-          mismatch: Boolean(linked && cfg.botUsername && linked.toLowerCase() !== cfg.botUsername.toLowerCase()),
+          botUsername: linked,                                  // token haqiqatda qaysi botniki
+          configuredUsername: cfg.configuredUsername || null,   // BOT_USERNAME nima deb yozilgan
+          appShortName: cfg.appShortName || null,
+          inviteBase: cfg.inviteBase || null,
+          mismatch: Boolean(linked && cfg.configuredUsername
+            && linked.toLowerCase() !== cfg.configuredUsername.toLowerCase()),
         },
       });
     }
@@ -409,6 +436,38 @@ async function handleApi(req, res, url) {
     if (path === '/api/admin/disabled') {
       const result = shop.setDisabled(body.itemId, Boolean(body.disabled));
       return json(res, result.ok ? 200 : 400, result);
+    }
+    if (path === '/api/admin/users') {
+      return json(res, 200, shop.userList({ limit: Number(body.limit) || 200, query: body.query }));
+    }
+    if (path === '/api/admin/grant') {
+      const tgId = String(body.tgId || '').trim();
+      if (!/^\d{3,20}$/.test(tgId)) return json(res, 400, { error: 'Telegram ID faqat raqamlardan iborat bo\'lishi kerak' });
+      const item = getItem(String(body.itemId || ''));
+      if (!item) return json(res, 400, { error: 'Bunday ko\'rinish yo\'q' });
+
+      const result = shop.giftItem(tgId, item.id, { note: body.note });
+      if (!result.ok) return json(res, 400, result);
+
+      // O'yinchiga xabar berish ixtiyoriy — bot ulanmagan bo'lsa jim o'tamiz
+      let notified = false;
+      if (bot && body.notify !== false && result.added > 0) {
+        notified = await bot.notify(tgId, [
+          '🎁 <b>Sizga sovg\'a!</b>',
+          '',
+          `<b>${item.name}</b> ochildi — hech qanday yulduz kerak emas.`,
+          '',
+          "O'yinni ochib, \"Do'kon\" bo'limidan kiyib oling.",
+        ].join('\n')).then(() => true).catch(() => false);
+      }
+      return json(res, 200, { ...result, itemName: item.name, notified });
+    }
+    if (path === '/api/admin/revoke') {
+      const tgId = String(body.tgId || '').trim();
+      const item = getItem(String(body.itemId || ''));
+      if (!item) return json(res, 400, { error: 'Bunday ko\'rinish yo\'q' });
+      const result = shop.revokeItem(tgId, item.id);
+      return json(res, result.ok ? 200 : 400, { ...result, itemName: item.name });
     }
     if (path === '/api/admin/refund') {
       const purchase = shop.findPurchase(String(body.chargeId || ''));
@@ -433,8 +492,7 @@ async function handleApi(req, res, url) {
 
   if (path === '/api/shop/profile') {
     // Taklif havolasi orqali kirgan bo'lsa (startapp=r<id>) — chaqiruvchiga bog'laymiz
-    const ref = parseRefParam(body.ref);
-    if (ref) shop.attachReferral(who.tgId, ref);
+    const ref = attachRef(body, who.tgId);
 
     const user = shop.user(who.tgId);
     return json(res, 200, {
@@ -444,12 +502,15 @@ async function handleApi(req, res, url) {
       equipped: user.equipped,
       starsSpent: user.starsSpent,
       referral: shop.referralInfo(who.tgId),
+      ref,
       items: catalogForClient(),
       starsEnabled: Boolean(bot),
     });
   }
 
   if (path === '/api/shop/played') {
+    // Taklif hali biriktirilmagan bo'lsa — o'yin boshlanishidan oldin ulgurib qolamiz
+    const ref = attachRef(body, who.tgId);
     // Mijoz o'yin boshlaganini bildiradi — shu payt taklif "tasdiqlangan" bo'ladi
     const result = shop.markPlayed(who.tgId);
     if (result.rewards.length && bot) {
@@ -462,14 +523,16 @@ async function handleApi(req, res, url) {
         "O'yinni ochib, do'kondan kiyib oling.",
       ].join('\n')).catch(() => {});
     }
-    return json(res, 200, { ok: true, referral: shop.referralInfo(who.tgId) });
+    return json(res, 200, { ok: true, ref, referral: shop.referralInfo(who.tgId) });
   }
 
   if (path === '/api/shop/referral') {
+    const ref = attachRef(body, who.tgId);
     return json(res, 200, {
       tgId: who.tgId,
       referral: shop.referralInfo(who.tgId),
-      link: telegramConfig().inviteBase ? `${telegramConfig().inviteBase}r${who.tgId}` : null,
+      ref,
+      link: referralLink(who.tgId),
     });
   }
 

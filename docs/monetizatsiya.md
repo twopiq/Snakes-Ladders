@@ -123,10 +123,21 @@ to'liq "do'stlik" to'plami yig'iladi.
 ### Qanday hisoblanadi
 
 1. O'yinchi "Do'stlar" ekranidan shaxsiy havolasini oladi:
-   `https://t.me/<bot>/<app>?startapp=r<uning_id>`
+   - `APP_SHORT_NAME` sozlangan bo'lsa: `https://t.me/<bot>/<app>?startapp=r<uning_id>`
+   - sozlanmagan bo'lsa: `https://t.me/<bot>?start=r<uning_id>` — bot javob berib,
+     o'yinni ochadigan tugmani yuboradi (parametr yo'qolmaydi).
 2. Do'st shu havola orqali kiradi — server uni chaqiruvchiga bog'laydi (*kutilmoqda*).
 3. Do'st **kamida bitta o'yin boshlaganda** chaqiruv tasdiqlanadi va hisobga qo'shiladi.
 4. 3/5/7/10 ga yetganda mukofot avtomatik ochiladi va botdan xabar keladi.
+
+Taklif yo'lda yo'qolmasligi uchun u **uch joyda** biriktiriladi:
+
+- bot `/start r<id>` xabarini olganda (Mini App umuman ochilmasa ham);
+- Mini App ochilganda — do'kon va "Do'stlar" so'rovlarida;
+- o'yin boshlanganida (`/api/shop/played`).
+
+Havola brauzer xotirasida (`localStorage`) saqlanadi va server "biriktirdim"
+(yoki "endi kech") deb javob bergunicha har so'rovda qayta yuboriladi.
 
 ### Soxta hisoblarga qarshi qoidalar
 
@@ -137,6 +148,36 @@ to'liq "do'stlik" to'plami yig'iladi.
 
 Mukofotlar faqat tashqi ko'rinish bo'lgani uchun aldashdan foyda kam, lekin bu
 qoidalar oddiy "havolani 10 marta ochish" usulini butunlay to'sadi.
+
+### Hisob 0 bo'lib turibdimi?
+
+Tartib bilan tekshiring:
+
+1. **Ma'lumot saqlanyaptimi?** `/admin` → "Telegram holati" → *Ma'lumot saqlanishi*.
+   Qizil bo'lsa — `DATA_DIR` sozlanmagan va Render har qayta ishga tushganda
+   do'st hisobini ham, xaridlarni ham o'chirib tashlaydi. Bu eng ko'p uchraydigan sabab.
+2. **Havola to'g'rimi?** O'sha bo'limdagi *Taklif havolasi* qatoriga qarang.
+   Bo'sh bo'lsa `BOT_USERNAME` yo'q (bot ulangan bo'lsa server uni o'zi topadi).
+3. **Do'st o'ynadimi?** "Do'stlar" ekranida "N ta hali o'ynamagan" deb yozilsa —
+   havola ishlagan, lekin do'st hali birorta o'yin boshlamagan. Bitta o'yin
+   boshlansa hisob darhol o'sadi.
+4. **Admin panelidagi "O'yinchilar"** ro'yxatida do'stni topib, uning yonida
+   "N ta do'st" yozuvi bor-yo'qligini ko'ring — bog'lanish bo'lgan-bo'lmagani shu yerda ko'rinadi.
+
+## Bepul berish (admin sovg'asi)
+
+`/admin` → **"🎁 Bepul berish"** bo'limi. Telegram ID va ko'rinishni tanlab,
+"Bepul berish" tugmasini bosasiz:
+
+- do'kondagi **istalgan** ko'rinish beriladi — to'plamlar va do'st mukofotlari ham;
+- yulduz hisobiga (`starsSpent`) tegmaydi, ya'ni bu xarid emas;
+- "Telegram orqali xabar yuborilsin" yoqilgan bo'lsa, o'yinchiga botdan xabar boradi;
+- xato berilgan sovg'ani "So'nggi sovg'alar" ro'yxatidan **olib qo'yish** mumkin
+  (o'sha ko'rinish kiyilgan bo'lsa, kiyimi bepul variantga qaytadi).
+
+Telegram ID ni bilmasangiz — pastdagi **"O'yinchilar"** ro'yxatidan ismi bo'yicha
+qidirib, "Tanlash" tugmasini bosing: ID formaga o'zi tushadi. O'yinchi hali
+ilovaga kirmagan bo'lsa ham ID bo'yicha berish mumkin — u kirganda ko'rinish joyida turadi.
 
 ## Sayt versiyasidan Telegram'ga yo'naltirish
 

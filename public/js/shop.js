@@ -8,7 +8,7 @@
 
 import { SLOTS, SLOT_NAMES, RARITY, defaultEquipped, getItem } from '../shared/cosmetics.js';
 import { drawItemPreview } from './preview.js';
-import { isTelegram, initData, openInvoice, haptic, tgConfig, refParam } from './telegram.js';
+import { isTelegram, initData, openInvoice, haptic, tgConfig, pendingRef, settleRef } from './telegram.js';
 import { canPromote, openTelegramApp, LOCK_LABEL } from './promo.js';
 import { $, toast, showModal, hideModal } from './ui.js';
 import { escapeHtml } from './game-view.js';
@@ -64,11 +64,12 @@ export async function loadShop({ silent = true } = {}) {
       const res = await fetch('/api/shop/profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        // ref — do'st taklifi havolasi orqali kelgan bo'lsa
-        body: JSON.stringify({ initData: initData(), ref: refParam() }),
+        // ref — do'st taklifi havolasi orqali kelgan bo'lsa (biriktirilgunicha yuboriladi)
+        body: JSON.stringify({ initData: initData(), ref: pendingRef() }),
       });
       if (res.ok) {
         const data = await res.json();
+        settleRef(data.ref);
         state.items = data.items;
         state.owned = data.owned;
         state.equipped = { ...defaultEquipped(), ...data.equipped };

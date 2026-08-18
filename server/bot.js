@@ -10,6 +10,7 @@
  */
 
 import { getItem } from '../public/shared/cosmetics.js';
+import { setBotUsername } from './telegram.js';
 
 const STARS = 'XTR';
 
@@ -129,6 +130,21 @@ export function createBot({ token, store, webappUrl = '' }) {
       const param = text.split(/\s+/)[1] || '';
       const isRef = /^r\d{3,20}$/.test(param);
       const code = !isRef && /^[A-Z0-9]{4}$/i.test(param) ? param.toUpperCase() : '';
+
+      // Taklifni shu yerdayoq biriktiramiz — Mini App ochilmasa ham yo'qolmasin.
+      // (Mini App ochilganda ham qayta yuboriladi, lekin ikkinchi marta hisoblanmaydi.)
+      let refNote = '';
+      if (isRef && msg.from?.id) {
+        const res = store.attachReferral(String(msg.from.id), param.slice(1));
+        refNote = res.ok
+          ? "Sizni do'stingiz chaqirdi — bitta o'yin o'ynasangiz, unga mukofot ochiladi 🎁"
+          : res.error === 'self'
+            ? "O'z havolangiz orqali kirdingiz — bu hisobga olinmaydi."
+            : res.error === 'already'
+              ? "Siz allaqachon boshqa do'stning taklifi bilan kirgansiz."
+              : "Siz o'yinni avval o'ynagansiz, shuning uchun bu taklif hisobga olinmaydi.";
+      }
+
       await call('sendMessage', {
         chat_id: chatId,
         parse_mode: 'HTML',
@@ -142,7 +158,7 @@ export function createBot({ token, store, webappUrl = '' }) {
           "• Do'konda fishka, narvon, ilon va taxta ko'rinishlari",
           '',
           code ? `🎟 Xona kodi: <code>${code}</code>`
-            : isRef ? "Sizni do'stingiz chaqirdi — o'ynasangiz unga mukofot ochiladi 🎁"
+            : isRef ? refNote
             : "Pastdagi tugmani bosing va o'ynang!",
         ].join('\n'),
         reply_markup: playButton(code ? `🎮 ${code} xonasiga kirish` : "🎮 O'ynash", code || param),
@@ -224,6 +240,7 @@ export function createBot({ token, store, webappUrl = '' }) {
   async function setup() {
     const me = await call('getMe');
     api.info = { id: me.id, username: me.username };
+    setBotUsername(me.username); // BOT_USERNAME yozilmagan bo'lsa ham havolalar ishlasin
     console.log(`Telegram bot ulandi: @${me.username}`);
     if (webappUrl.startsWith('https://')) {
       await call('setChatMenuButton', {

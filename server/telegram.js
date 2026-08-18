@@ -17,19 +17,52 @@ const MAX_AGE_SEC = 24 * 60 * 60;
 
 export const telegramEnabled = Boolean(BOT_TOKEN);
 
+// Bot ulangach getMe orqali aniqlanadigan haqiqiy foydalanuvchi nomi.
+// BOT_USERNAME yozilmay qolsa ham taklif havolalari ishlashi uchun kerak.
+let resolvedUsername = '';
+
+/** Bot ulangach o'zining haqiqiy nomini shu yerga yozadi. */
+export function setBotUsername(name) {
+  resolvedUsername = String(name || '').trim().replace(/^@/, '');
+}
+
+/** Sozlamadagi yoki botning o'zidan aniqlangan nom. */
+export const botUsername = () => BOT_USERNAME || resolvedUsername;
+
 /** Bot tokeni (faqat server ichida ishlatiladi). */
 export const botToken = () => BOT_TOKEN;
+
+/**
+ * Havola asosi.
+ *
+ * Mini App "short name" ma'lum bo'lsa `?startapp=` ishlatiladi — havola to'g'ridan-to'g'ri
+ * o'yinni ochadi. Short name bo'lmasa `?startapp=` ishonchsiz (bot uchun "asosiy Mini App"
+ * sozlanmagan bo'lsa hech narsa uzatilmaydi), shuning uchun oddiy bot havolasiga
+ * (`?start=`) tushamiz: bot javobida o'yinni ochadigan tugma bo'ladi va parametr saqlanadi.
+ */
+export function linkBase() {
+  const user = botUsername();
+  if (!user) return '';
+  return APP_SHORT_NAME
+    ? `https://t.me/${user}/${APP_SHORT_NAME}?startapp=`
+    : `https://t.me/${user}?start=`;
+}
+
+/** Do'st taklifi havolasi: ...r<chaqiruvchi_id>. */
+export function referralLink(tgId) {
+  const base = linkBase();
+  return base ? `${base}r${tgId}` : null;
+}
 
 /** Mijozga beriladigan sozlama (maxfiy token bu yerda yo'q). */
 export function telegramConfig() {
   return {
     enabled: telegramEnabled,
-    botUsername: BOT_USERNAME,
+    botUsername: botUsername(),
+    configuredUsername: BOT_USERNAME,
     appShortName: APP_SHORT_NAME,
-    // Xona havolasi shu ko'rinishda yasaladi: .../<code>
-    inviteBase: BOT_USERNAME
-      ? `https://t.me/${BOT_USERNAME}${APP_SHORT_NAME ? `/${APP_SHORT_NAME}` : ''}?startapp=`
-      : '',
+    // Xona havolasi shu ko'rinishda yasaladi: <inviteBase><code>
+    inviteBase: linkBase(),
   };
 }
 

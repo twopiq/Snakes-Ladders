@@ -156,6 +156,16 @@ o'ylaydi, lekin serverdan xabar kelmaydi. Shunga qarshi:
   hech qachon "qotib" qolmaydi;
 - server navbat xatosiga javoban joriy holatni ham yuboradi.
 
+## Admin paneli
+
+`/admin` manzilida (kirish uchun `ADMIN_PASSWORD` kerak):
+
+- ko'rinishlar narxini o'zgartirish va sotuvdan olish;
+- Telegram sozlamalari diagnostikasi (token, bot nomi, taklif havolasi, ma'lumot saqlanishi);
+- **istalgan ko'rinishni Telegram foydalanuvchisiga bepul berish** va kerak bo'lsa qaytarib olish;
+- o'yinchilar ro'yxati (ism/ID bo'yicha qidiruv) va do'st chaqirish hisobi;
+- xaridlar tarixi va yulduzlarni qaytarish.
+
 ## Boshqaruv
 
 - **Zar tashlash** tugmasi yoki **Bo'sh joy / Enter** tugmalari.

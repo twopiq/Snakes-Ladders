@@ -6,10 +6,15 @@
  */
 
 import { $, toast } from './ui.js';
-import { SLOT_NAMES, RARITY } from '../shared/cosmetics.js';
+import { SLOT_NAMES, RARITY, getItem } from '../shared/cosmetics.js';
 
 const SLOT_LABEL = { ...SLOT_NAMES, bundle: "To'plam" };
 let key = sessionStorage.getItem('il_admin_key') || '';
+let catalog = [];   // oxirgi yuklangan katalog (sovg'a ro'yxati uchun)
+let allUsers = [];  // oxirgi yuklangan o'yinchilar (qidiruv mijozda ishlaydi)
+
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => (
+  { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 async function api(path, body) {
   const res = await fetch(path, {
@@ -45,13 +50,19 @@ async function refresh() {
   }
 }
 
-function render({ items, stats, starsEnabled, telegram }) {
-  renderDiagnostics(telegram, starsEnabled);
+function render({ items, stats, users, starsEnabled, telegram, storage }) {
+  catalog = items;
+  allUsers = users?.shown || [];
+  renderDiagnostics(telegram, starsEnabled, storage);
+  renderGiftForm(items);
+  renderUsers(users);
+  renderGifts(stats.gifts || []);
   $('#stats').innerHTML = `
     <div class="stat"><b>${stats.starsTotal}</b><span>⭐ jami tushum</span></div>
     <div class="stat"><b>${stats.purchases}</b><span>xarid</span></div>
     <div class="stat"><b>${stats.users}</b><span>o'yinchi</span></div>
     <div class="stat"><b>${stats.refunds}</b><span>qaytarilgan</span></div>
+    <div class="stat"><b>${stats.referrals?.confirmed ?? 0}</b><span>tasdiqlangan taklif</span></div>
     <div class="stat ${starsEnabled ? 'ok' : 'warn'}">
       <b>${starsEnabled ? 'Yoqilgan' : "O'chiq"}</b><span>Stars to'lovi</span>
     </div>`;
@@ -100,7 +111,7 @@ function render({ items, stats, starsEnabled, telegram }) {
 }
 
 /** Telegram sozlamasi to'g'rimi — eng ko'p uchraydigan xatolarni ko'rsatadi. */
-function renderDiagnostics(tg = {}, starsEnabled) {
+function renderDiagnostics(tg = {}, starsEnabled, storage = {}) {
   const box = document.getElementById('diag');
   if (!box) return;
 
@@ -121,9 +132,20 @@ function renderDiagnostics(tg = {}, starsEnabled) {
   } else {
     rows.push(['warn', 'BOT_USERNAME', "yo'q — saytdan Telegram'ga yo'naltirish ishlamaydi"]);
   }
+  rows.push(tg.appShortName
+    ? ['ok', 'APP_SHORT_NAME', tg.appShortName]
+    : ['warn', 'APP_SHORT_NAME', "yo'q — havolalar bot chati orqali ochiladi (?start=)"]);
+  rows.push(tg.inviteBase
+    ? ['ok', 'Taklif havolasi', `${tg.inviteBase}r&lt;id&gt;`]
+    : ['bad', 'Taklif havolasi', "yasab bo'lmaydi — do'st chaqirish ishlamaydi"]);
   rows.push(starsEnabled
     ? ['ok', "Stars to'lovi", 'yoqilgan']
     : ['bad', "Stars to'lovi", "o'chiq (BOT_TOKEN yoki bot ulanmagan)"]);
+  rows.push(storage.persistent
+    ? ['ok', 'Ma\'lumot saqlanishi', `DATA_DIR: ${esc(storage.file || '')}`]
+    : ['bad', 'Ma\'lumot saqlanishi',
+       "DATA_DIR sozlanmagan — Render bepul tarifida har deploy/qayta ishga tushishdan keyin "
+       + "xaridlar va do'st hisobi <b>o'chib ketadi</b>. Doimiy disk ulab, DATA_DIR ni ko'rsating."]);
 
   box.innerHTML = `<h3>Telegram holati</h3>` + rows.map(([k, name, val]) => `
     <div class="diag-row ${k}">
@@ -133,7 +155,119 @@ function renderDiagnostics(tg = {}, starsEnabled) {
     </div>`).join('');
 }
 
+/** Sovg'a formasidagi ko'rinishlar ro'yxati. */
+function renderGiftForm(items) {
+  const sel = document.getElementById('giftItem');
+  if (!sel) return;
+  const keep = sel.value;
+  const group = (label, list) => list.length
+    ? `<optgroup label="${esc(label)}">${list.map((i) => `
+        <option value="${esc(i.id)}">${esc(i.name)}${i.price ? ` — ${i.price} ⭐` : i.unlock ? ' — mukofot' : ' — bepul'}</option>`).join('')}</optgroup>`
+    : '';
+  sel.innerHTML = ['token', 'ladder', 'snake', 'board', 'bundle']
+    .map((slot) => group(SLOT_LABEL[slot] || slot, items.filter((i) => i.slot === slot)))
+    .join('');
+  if (keep) sel.value = keep;
+}
+
+/** O'yinchilar ro'yxati — ID ni bosib sovg'a formasiga qo'yish mumkin. */
+function renderUsers(users) {
+  const root = document.getElementById('userList');
+  if (!root) return;
+  const q = (document.getElementById('userSearch')?.value || '').trim().toLowerCase();
+  const rows = allUsers.filter((u) => !q || u.tgId.includes(q) || (u.name || '').toLowerCase().includes(q));
+
+  const total = document.getElementById('userTotal');
+  if (total) total.textContent = users ? `— jami ${users.total} ta` : '';
+
+  root.innerHTML = rows.length ? rows.map((u) => `
+    <div class="user-row">
+      <div class="u-main">
+        <b>${esc(u.name || 'Ismsiz')}</b>
+        <small><code>${esc(u.tgId)}</code> · ${u.played ? "o'ynagan" : "hali o'ynamagan"}${
+          u.starsSpent ? ` · ${u.starsSpent} ⭐` : ''}${
+          u.invitedConfirmed ? ` · ${u.invitedConfirmed} ta do'st` : ''}${
+          u.invitedPending ? ` (+${u.invitedPending} kutilmoqda)` : ''}</small>
+      </div>
+      <div class="u-actions">
+        <button class="ghost" data-pick="${esc(u.tgId)}">Tanlash</button>
+        <button class="ghost" data-items="${esc(u.tgId)}">Ko'rinishlari (${u.owned})</button>
+      </div>
+      <div class="u-items hidden" data-items-for="${esc(u.tgId)}">${u.items.map((id) => `
+        <span class="u-item">${esc(getItem(id)?.name || id)}
+          <button class="link-btn" data-revoke="${esc(id)}" data-user="${esc(u.tgId)}" title="Olib qo'yish">✕</button>
+        </span>`).join('')}</div>
+    </div>`).join('')
+    : '<p class="muted">Mos o\'yinchi topilmadi.</p>';
+}
+
+function renderGifts(gifts) {
+  const root = document.getElementById('gifts');
+  if (!root) return;
+  root.innerHTML = gifts.length ? gifts.map((g) => `
+    <div class="purchase ${g.revoked ? 'refunded' : ''}">
+      <div>
+        <b>${esc(getItem(g.itemId)?.name || g.itemId)}</b>
+        <small>${esc(g.tgId)} · ${new Date(g.at).toLocaleString('uz')}${g.added ? '' : ' · allaqachon bor edi'}</small>
+      </div>
+      <div class="p-stars">bepul</div>
+      <div>${g.revoked
+        ? '<span class="muted" style="margin:0">olib qo\'yilgan</span>'
+        : `<button class="ghost" data-revoke="${esc(g.itemId)}" data-user="${esc(g.tgId)}">Olib qo'yish</button>`}</div>
+    </div>`).join('')
+    : '<p class="muted">Hozircha sovg\'a berilmagan.</p>';
+}
+
+async function gift() {
+  const tgId = $('#giftId').value.trim();
+  const itemId = $('#giftItem').value;
+  const msg = $('#giftMsg');
+  msg.textContent = '';
+  msg.className = 'conn-status';
+  if (!/^\d{3,20}$/.test(tgId)) {
+    msg.textContent = "Telegram ID faqat raqamlardan iborat bo'lishi kerak";
+    msg.className = 'conn-status bad';
+    return;
+  }
+  try {
+    const res = await api('/api/admin/grant', { tgId, itemId, notify: $('#giftNotify').checked });
+    msg.className = 'conn-status ok';
+    msg.textContent = res.added
+      ? `${res.itemName} berildi${res.notified ? ' va xabar yuborildi' : ''}`
+      : `${res.itemName} bu o'yinchida allaqachon bor edi`;
+    toast(`${res.itemName} → ${tgId}`);
+    refresh();
+  } catch (err) {
+    msg.className = 'conn-status bad';
+    msg.textContent = err.message;
+  }
+}
+
 function bind() {
+  for (const btn of document.querySelectorAll('[data-pick]')) {
+    btn.addEventListener('click', () => {
+      $('#giftId').value = btn.dataset.pick;
+      $('#giftId').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  }
+  for (const btn of document.querySelectorAll('[data-items]')) {
+    btn.addEventListener('click', () => {
+      document.querySelector(`[data-items-for="${btn.dataset.items}"]`)?.classList.toggle('hidden');
+    });
+  }
+  for (const btn of document.querySelectorAll('[data-revoke]')) {
+    btn.addEventListener('click', async () => {
+      const { revoke, user } = btn.dataset;
+      if (!confirm(`${getItem(revoke)?.name || revoke} — ${user} dan olib qo'yilsinmi?`)) return;
+      try {
+        const res = await api('/api/admin/revoke', { tgId: user, itemId: revoke });
+        toast(res.removed ? `${res.itemName} olib qo'yildi` : 'Bu o\'yinchida yo\'q edi');
+        refresh();
+      } catch (err) {
+        toast(err.message, 'bad');
+      }
+    });
+  }
   for (const btn of document.querySelectorAll('[data-save]')) {
     btn.addEventListener('click', async () => {
       const id = btn.dataset.save;
@@ -182,6 +316,12 @@ function bind() {
     });
   }
 }
+
+document.getElementById('giftBtn')?.addEventListener('click', gift);
+document.getElementById('userSearch')?.addEventListener('input', () => {
+  renderUsers(null);
+  bind();
+});
 
 $('#loginBtn').addEventListener('click', login);
 $('#key').addEventListener('keydown', (e) => {

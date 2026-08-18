@@ -16,7 +16,7 @@ import { getItem, grantsOf, freeItems, defaultEquipped, SLOTS, REFERRAL_TIERS } 
 const DATA_DIR = process.env.DATA_DIR || path.resolve(process.cwd(), 'data');
 const FILE = path.join(DATA_DIR, 'store.json');
 
-const EMPTY = { users: {}, prices: {}, disabled: [], purchases: [], updatedAt: null };
+const EMPTY = { users: {}, prices: {}, disabled: [], purchases: [], gifts: [], updatedAt: null };
 
 export class Store {
   constructor(file = FILE) {
@@ -31,6 +31,7 @@ export class Store {
       const raw = fs.readFileSync(this.file, 'utf8');
       const parsed = JSON.parse(raw);
       this.data = { ...structuredClone(EMPTY), ...parsed };
+      if (!Array.isArray(this.data.gifts)) this.data.gifts = [];
     } catch {
       this.data = structuredClone(EMPTY); // fayl yo'q — bo'sh boshlaymiz
     }
@@ -113,7 +114,9 @@ export class Store {
         owned: freeItems(),
         equipped: defaultEquipped(),
         starsSpent: 0,
+        name: null,           // admin panelida tanib olish uchun
         firstSeen: new Date().toISOString(),
+        lastSeen: new Date().toISOString(),
         played: false,        // kamida bitta o'yin o'ynadimi
         invitedBy: null,      // kim chaqirgan
         invitedConfirmed: 0,  // nechta do'st haqiqatan o'ynay boshladi
@@ -125,6 +128,16 @@ export class Store {
     const u = this.data.users[id];
     // Bepul narsalar har doim ochiq bo'lsin (katalog kengaysa ham)
     for (const free of freeItems()) if (!u.owned.includes(free)) u.owned.push(free);
+    return u;
+  }
+
+  /** O'yinchi ilovaga kirdi — ismini va oxirgi kirish vaqtini yangilaymiz. */
+  touch(tgId, name) {
+    const u = this.user(tgId);
+    const clean = String(name || '').trim().slice(0, 64);
+    if (clean && u.name !== clean) u.name = clean;
+    u.lastSeen = new Date().toISOString();
+    this.saveSoon();
     return u;
   }
 
@@ -202,6 +215,7 @@ export class Store {
     return {
       confirmed,
       pending: user.invitedPending || 0,
+      invitedBy: user.invitedBy || null,
       rewards: REFERRAL_TIERS.map((tier) => ({
         count: tier.count,
         itemId: tier.itemId,
@@ -227,6 +241,66 @@ export class Store {
     }
     this.saveSoon();
     return added;
+  }
+
+  /**
+   * Admin biror ko'rinishni bepul beradi (yulduzsiz).
+   * Mukofot ko'rinishlari ham beriladi — bu admin qarori.
+   */
+  giftItem(tgId, itemId, { by = 'admin', note = '' } = {}) {
+    const item = getItem(itemId);
+    if (!item) return { ok: false, error: 'Bunday ko\'rinish yo\'q' };
+    const added = this.grant(tgId, itemId);
+    const entry = {
+      tgId: String(tgId), itemId, by, note: String(note || '').slice(0, 200),
+      added, at: new Date().toISOString(), revoked: false,
+    };
+    this.data.gifts.push(entry);
+    this.saveNow(); // sovg'a — muhim, darhol yozamiz
+    return { ok: true, added, alreadyOwned: added === 0, gift: entry, owned: this.user(tgId).owned };
+  }
+
+  /** Berilgan ko'rinishni qaytarib oladi (xato bergan bo'lsa). */
+  revokeItem(tgId, itemId) {
+    const item = getItem(itemId);
+    if (!item) return { ok: false, error: 'Bunday ko\'rinish yo\'q' };
+    const u = this.user(tgId);
+    const remove = new Set(grantsOf(itemId));
+    const before = u.owned.length;
+    u.owned = u.owned.filter((id) => !remove.has(id));
+    // Bepul variantlar hech qachon olinmaydi, kiyimi ham buzilmasin
+    for (const free of freeItems()) if (!u.owned.includes(free)) u.owned.push(free);
+    for (const slot of SLOTS) {
+      if (!u.owned.includes(u.equipped[slot])) u.equipped[slot] = defaultEquipped()[slot];
+    }
+    for (const g of this.data.gifts) {
+      if (g.tgId === String(tgId) && g.itemId === itemId) g.revoked = true;
+    }
+    this.saveNow();
+    return { ok: true, removed: before - u.owned.length, owned: u.owned };
+  }
+
+  /** Admin paneli uchun o'yinchilar ro'yxati (eng yangi kirganlar oldinda). */
+  userList({ limit = 200, query = '' } = {}) {
+    const q = String(query || '').trim().toLowerCase();
+    const rows = Object.entries(this.data.users).map(([tgId, u]) => ({
+      tgId,
+      name: u.name || null,
+      played: Boolean(u.played),
+      starsSpent: u.starsSpent || 0,
+      owned: u.owned.length,
+      invitedBy: u.invitedBy || null,
+      invitedConfirmed: u.invitedConfirmed || 0,
+      invitedPending: u.invitedPending || 0,
+      firstSeen: u.firstSeen || null,
+      lastSeen: u.lastSeen || u.firstSeen || null,
+      items: u.owned.slice(),
+    }));
+    const filtered = q
+      ? rows.filter((r) => r.tgId.includes(q) || (r.name || '').toLowerCase().includes(q))
+      : rows;
+    filtered.sort((a, b) => String(b.lastSeen || '').localeCompare(String(a.lastSeen || '')));
+    return { total: rows.length, shown: filtered.slice(0, limit) };
   }
 
   /** Sotib olingan ko'rinishni kiyadi. */
@@ -303,6 +377,13 @@ export class Store {
       starsTotal: active.reduce((s, p) => s + p.stars, 0),
       byItem,
       recent: this.data.purchases.slice(-25).reverse(),
+      referrals: {
+        attached: users.filter((u) => u.invitedBy).length,
+        confirmed: users.reduce((n, u) => n + (u.invitedConfirmed || 0), 0),
+        pending: users.reduce((n, u) => n + (u.invitedPending || 0), 0),
+        rewarded: users.filter((u) => (u.rewardsGiven || []).length).length,
+      },
+      gifts: this.data.gifts.slice(-25).reverse(),
     };
   }
 }

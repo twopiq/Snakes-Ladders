@@ -166,3 +166,69 @@ test('Stars: hisob-faktura, to\'lov, narsa ochilishi va qaytarish', async (t) =>
   const blocked = await post('/api/shop/invoice', { initData, itemId: 'snake-dragon' });
   assert.equal(blocked.status, 400);
 });
+
+test('bot: /start r<id> taklifni biriktiradi, admin sovg\'asi haqida xabar boradi', async (t) => {
+  const tg = fakeTelegram();
+  await tg.listen();
+  t.after(() => tg.close());
+
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'il-bot-'));
+  const PORT = 5000 + Math.floor(Math.random() * 200);
+  const server = spawn(process.execPath, ['server/index.js'], {
+    env: {
+      ...process.env,
+      PORT: String(PORT),
+      DATA_DIR: dataDir,
+      BOT_TOKEN: TEST_BOT_TOKEN,
+      ADMIN_PASSWORD: ADMIN_KEY,
+      TELEGRAM_API_BASE: `http://127.0.0.1:${tg.port()}`,
+      WEBAPP_URL: 'https://example.com',
+      // BOT_USERNAME ataylab berilmadi — bot getMe orqali o'zini tanishi kerak
+    },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  t.after(() => server.kill());
+
+  const base = `http://127.0.0.1:${PORT}`;
+  for (let i = 0; i < 60; i++) {
+    try { if ((await fetch(`${base}/api/health`)).ok) break; } catch { /* kutamiz */ }
+    await sleep(120);
+  }
+  const post = (p, body, headers = {}) => fetch(`${base}${p}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(body),
+  });
+
+  // Bot getMe javobidan o'z nomini oladi — taklif havolasi shundan yasaladi
+  for (let i = 0; i < 40 && !(await (await fetch(`${base}/api/config`)).json()).telegram.botUsername; i++) {
+    await sleep(100);
+  }
+  const cfg = await (await fetch(`${base}/api/config`)).json();
+  assert.equal(cfg.telegram.botUsername, 'test_bot', 'BOT_USERNAME yozilmasa ham bot o\'zini taniydi');
+
+  // Do'st bot chatida "/start r700" bosdi — Mini App hali ochilmagan
+  tg.push({ update_id: 1, message: { message_id: 1, chat: { id: 701 }, from: { id: 701, first_name: 'Do\'st' }, text: '/start r700' } });
+  for (let i = 0; i < 40; i++) {
+    if (tg.calls.some((c) => c.method === 'sendMessage')) break;
+    await sleep(100);
+  }
+  const hello = tg.calls.filter((c) => c.method === 'sendMessage').pop();
+  assert.match(hello.body.text, /do'stingiz chaqirdi/i);
+
+  // O'yin boshlangach chaqiruvchining hisobi o'sadi
+  const friend = makeInitData({ user: { id: 701, first_name: 'Do\'st' } });
+  await post('/api/shop/played', { initData: friend });
+
+  const host = makeInitData({ user: { id: 700, first_name: 'Host' } });
+  const info = await (await post('/api/shop/referral', { initData: host })).json();
+  assert.equal(info.referral.confirmed, 1, 'bot orqali kelgan taklif hisobga tushdi');
+  assert.equal(info.link, 'https://t.me/test_bot?start=r700');
+
+  // Admin sovg'a bersa — o'yinchiga xabar boradi
+  const before = tg.calls.filter((c) => c.method === 'sendMessage').length;
+  const gift = await post('/api/admin/grant', { tgId: '701', itemId: 'token-crown' }, { 'x-admin-key': ADMIN_KEY });
+  assert.equal(gift.status, 200);
+  assert.equal((await gift.json()).notified, true);
+  const sent = tg.calls.filter((c) => c.method === 'sendMessage');
+  assert.equal(sent.length, before + 1);
+  assert.match(sent.pop().body.text, /sovg'a/i);
+});

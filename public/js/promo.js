@@ -16,14 +16,23 @@ import { isTelegram, tgConfig } from './telegram.js';
 const HIDE_KEY = 'il_promo_hidden_until';
 const HIDE_DAYS = 7;
 
-/** Mini App havolasi: https://t.me/<bot>/<app> */
+/**
+ * Mini App havolasi.
+ *
+ * Parametrli havola serverdagi "inviteBase" dan yasaladi: Mini App short name
+ * bo'lsa `?startapp=`, bo'lmasa `?start=` (oddiy bot havolasi — u har doim
+ * ishlaydi, bot javobida o'yinni ochadigan tugma bo'ladi).
+ */
 export function telegramAppLink(startParam = '') {
-  const { botUsername, appShortName } = tgConfig();
+  const { botUsername, appShortName, inviteBase } = tgConfig();
   if (!botUsername) return null;
-  const base = appShortName
+  const plain = appShortName
     ? `https://t.me/${botUsername}/${appShortName}`
     : `https://t.me/${botUsername}`;
-  return startParam ? `${base}?startapp=${encodeURIComponent(startParam)}` : base;
+  if (!startParam) return plain;
+  return inviteBase
+    ? `${inviteBase}${encodeURIComponent(startParam)}`
+    : `${plain}?start=${encodeURIComponent(startParam)}`;
 }
 
 /** Yo'naltirishni ko'rsatish mumkinmi? */

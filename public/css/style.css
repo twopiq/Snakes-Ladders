@@ -905,3 +905,73 @@ a:hover { color: #7dd3fc; }
 
 .player-card.left { opacity: .5; }
 .player-card.left .who b { text-decoration: line-through; }
+
+/* admin: sovg'a berish va o'yinchilar ro'yxati */
+.gift-form {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr auto;
+  gap: 8px;
+  align-items: center;
+}
+.gift-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.gift-check input { width: 16px; height: 16px; }
+
+.user-list { display: grid; gap: 8px; margin-top: 10px; }
+.user-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+.u-main b { display: block; font-size: 14px; }
+.u-main small { color: var(--muted); font-size: 11px; }
+.u-main code { font-family: ui-monospace, monospace; }
+.u-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.u-actions button { padding: 7px 10px; font-size: 12px; }
+.u-items {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--line);
+}
+.u-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 12px;
+}
+
+@media (max-width: 700px) {
+  .gift-form { grid-template-columns: 1fr; }
+  .user-row { grid-template-columns: 1fr; }
+}
+
+/* do'stlar: taklif havolasi matni */
+.link-box {
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--panel-2);
+  border: 1px dashed var(--line);
+  color: var(--muted);
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  word-break: break-all;
+}
