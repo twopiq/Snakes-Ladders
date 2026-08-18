@@ -1,0 +1,217 @@
+/**
+ * Oddiy JSON saqlagich: o'yinchilar, sotib olishlar va admin o'rnatgan narxlar.
+ *
+ * Ma'lumot DATA_DIR/store.json faylida turadi. Yozish atomik (avval .tmp faylga,
+ * keyin rename) va biroz kechiktirilgan — tez-tez yozishdan diskni asraydi.
+ *
+ * DIQQAT: Render'ning bepul tarifida disk vaqtinchalik — har deploydan keyin
+ * fayl tozalanadi. Doimiy saqlash uchun Render Disk ulang yoki DATA_DIR ni
+ * doimiy katalogga yo'naltiring (docs/monetizatsiya.md ga qarang).
+ */
+
+import fs from 'node:fs';
+import path from 'node:path';
+import { getItem, grantsOf, freeItems, defaultEquipped, SLOTS } from '../public/shared/cosmetics.js';
+
+const DATA_DIR = process.env.DATA_DIR || path.resolve(process.cwd(), 'data');
+const FILE = path.join(DATA_DIR, 'store.json');
+
+const EMPTY = { users: {}, prices: {}, disabled: [], purchases: [], updatedAt: null };
+
+export class Store {
+  constructor(file = FILE) {
+    this.file = file;
+    this.data = structuredClone(EMPTY);
+    this.timer = null;
+    this.load();
+  }
+
+  load() {
+    try {
+      const raw = fs.readFileSync(this.file, 'utf8');
+      const parsed = JSON.parse(raw);
+      this.data = { ...structuredClone(EMPTY), ...parsed };
+    } catch {
+      this.data = structuredClone(EMPTY); // fayl yo'q — bo'sh boshlaymiz
+    }
+  }
+
+  /** Yozishni 300 ms ga kechiktiradi (ketma-ket o'zgarishlar bitta yozuvga qo'shiladi). */
+  saveSoon() {
+    if (this.timer) return;
+    this.timer = setTimeout(() => {
+      this.timer = null;
+      this.saveNow();
+    }, 300);
+    this.timer.unref?.();
+  }
+
+  saveNow() {
+    try {
+      fs.mkdirSync(path.dirname(this.file), { recursive: true });
+      this.data.updatedAt = new Date().toISOString();
+      const tmp = `${this.file}.tmp`;
+      fs.writeFileSync(tmp, JSON.stringify(this.data, null, 2));
+      fs.renameSync(tmp, this.file);
+    } catch (err) {
+      console.error('store yozib bo\'lmadi:', err.message);
+    }
+  }
+
+  // ---------------------------------------------------------------- narxlar
+
+  /** Amaldagi narx: admin o'zgartirgan bo'lsa — o'sha, bo'lmasa katalogdagi. */
+  price(itemId) {
+    const item = getItem(itemId);
+    if (!item) return null;
+    const override = this.data.prices[itemId];
+    return Number.isInteger(override) ? override : item.price;
+  }
+
+  /**
+   * Narxni o'zgartiradi. stars = null bo'lsa katalogdagi qiymatga qaytadi.
+   * Telegram Stars chegarasi: 1..100000 (bepul narsalar narxlanmaydi).
+   */
+  setPrice(itemId, stars) {
+    const item = getItem(itemId);
+    if (!item) return { ok: false, error: 'Bunday ko\'rinish yo\'q' };
+    if (item.price === 0) return { ok: false, error: 'Bepul ko\'rinish narxlanmaydi' };
+    if (stars === null || stars === undefined) {
+      delete this.data.prices[itemId];
+      this.saveSoon();
+      return { ok: true, price: item.price };
+    }
+    const n = Number(stars);
+    if (!Number.isInteger(n) || n < 1 || n > 100000) {
+      return { ok: false, error: 'Narx 1 dan 100000 gacha butun son bo\'lishi kerak' };
+    }
+    this.data.prices[itemId] = n;
+    this.saveSoon();
+    return { ok: true, price: n };
+  }
+
+  isDisabled(itemId) {
+    return this.data.disabled.includes(itemId);
+  }
+
+  setDisabled(itemId, off) {
+    if (!getItem(itemId)) return { ok: false, error: 'Bunday ko\'rinish yo\'q' };
+    const set = new Set(this.data.disabled);
+    if (off) set.add(itemId);
+    else set.delete(itemId);
+    this.data.disabled = [...set];
+    this.saveSoon();
+    return { ok: true, disabled: off };
+  }
+
+  // ---------------------------------------------------------------- o'yinchilar
+
+  user(tgId) {
+    const id = String(tgId);
+    if (!this.data.users[id]) {
+      this.data.users[id] = {
+        owned: freeItems(),
+        equipped: defaultEquipped(),
+        starsSpent: 0,
+        firstSeen: new Date().toISOString(),
+      };
+      this.saveSoon();
+    }
+    const u = this.data.users[id];
+    // Bepul narsalar har doim ochiq bo'lsin (katalog kengaysa ham)
+    for (const free of freeItems()) if (!u.owned.includes(free)) u.owned.push(free);
+    return u;
+  }
+
+  owns(tgId, itemId) {
+    return this.user(tgId).owned.includes(itemId);
+  }
+
+  /** Narsani (yoki to'plamdagi hammasini) o'yinchiga beradi. */
+  grant(tgId, itemId) {
+    const u = this.user(tgId);
+    let added = 0;
+    for (const id of grantsOf(itemId)) {
+      if (!u.owned.includes(id)) {
+        u.owned.push(id);
+        added++;
+      }
+    }
+    this.saveSoon();
+    return added;
+  }
+
+  /** Sotib olingan ko'rinishni kiyadi. */
+  equip(tgId, slot, itemId) {
+    if (!SLOTS.includes(slot)) return { ok: false, error: 'Noma\'lum bo\'lim' };
+    const item = getItem(itemId);
+    if (!item || item.slot !== slot) return { ok: false, error: 'Bu ko\'rinish bu bo\'limga to\'g\'ri kelmaydi' };
+    const u = this.user(tgId);
+    if (!u.owned.includes(itemId)) return { ok: false, error: 'Bu ko\'rinish sizda yo\'q' };
+    u.equipped[slot] = itemId;
+    this.saveSoon();
+    return { ok: true, equipped: u.equipped };
+  }
+
+  // ---------------------------------------------------------------- to'lovlar
+
+  recordPurchase({ tgId, itemId, stars, chargeId, name }) {
+    const entry = {
+      tgId: String(tgId),
+      itemId,
+      stars,
+      chargeId,
+      name: name || null,
+      at: new Date().toISOString(),
+      refunded: false,
+    };
+    this.data.purchases.push(entry);
+    const u = this.user(tgId);
+    u.starsSpent += stars;
+    this.grant(tgId, itemId);
+    this.saveNow(); // to'lov — muhim, darhol yozamiz
+    return entry;
+  }
+
+  findPurchase(chargeId) {
+    return this.data.purchases.find((p) => p.chargeId === chargeId) || null;
+  }
+
+  markRefunded(chargeId) {
+    const p = this.findPurchase(chargeId);
+    if (!p) return { ok: false, error: 'Bunday to\'lov topilmadi' };
+    if (p.refunded) return { ok: false, error: 'Allaqachon qaytarilgan' };
+    p.refunded = true;
+    const u = this.user(p.tgId);
+    u.starsSpent = Math.max(0, u.starsSpent - p.stars);
+    // Qaytarilgan narsa olib qo'yiladi (to'plam bo'lsa — ichidagilar ham)
+    for (const id of grantsOf(p.itemId)) {
+      u.owned = u.owned.filter((x) => x === id ? false : true);
+    }
+    for (const free of freeItems()) if (!u.owned.includes(free)) u.owned.push(free);
+    for (const slot of SLOTS) {
+      if (!u.owned.includes(u.equipped[slot])) u.equipped[slot] = defaultEquipped()[slot];
+    }
+    this.saveNow();
+    return { ok: true, purchase: p };
+  }
+
+  /** Admin paneli uchun umumiy hisobot. */
+  stats() {
+    const active = this.data.purchases.filter((p) => !p.refunded);
+    const byItem = {};
+    for (const p of active) {
+      byItem[p.itemId] = byItem[p.itemId] || { count: 0, stars: 0 };
+      byItem[p.itemId].count++;
+      byItem[p.itemId].stars += p.stars;
+    }
+    return {
+      users: Object.keys(this.data.users).length,
+      purchases: active.length,
+      refunds: this.data.purchases.length - active.length,
+      starsTotal: active.reduce((s, p) => s + p.stars, 0),
+      byItem,
+      recent: this.data.purchases.slice(-25).reverse(),
+    };
+  }
+}

@@ -1,0 +1,129 @@
+# Do'kon, Telegram Stars va narx boshqaruvi
+
+O'yinda ko'rinishlar (kosmetika) sotiladi: **fishkalar**, **narvon uslublari**,
+**ilon uslublari** va **taxta mavzulari**. Ular faqat tashqi ko'rinishni
+o'zgartiradi — o'yin qoidalariga ta'sir qilmaydi (bu Telegram qoidalariga ham mos
+va o'yinchilar orasida adolatni saqlaydi).
+
+Har bir bo'limda bitta **bepul** variant bor, shuning uchun hech narsa sotib
+olmagan o'yinchi ham bemalol o'ynayveradi.
+
+## Qanday ishlaydi
+
+1. O'yinchi Telegram ichida do'konni ochadi va narsani tanlaydi.
+2. Server Telegram'dan **to'lov havolasi** (`createInvoiceLink`, valyuta `XTR`) oladi.
+3. Mini App `openInvoice` bilan to'lov oynasini ochadi.
+4. To'lov o'tgach Telegram botga `successful_payment` yuboradi — server narsani
+   o'yinchiga ochadi va uni avtomatik kiydiradi.
+5. Xarid `DATA_DIR/store.json` ga yoziladi (xarid raqami — `charge id` bilan).
+
+Bot **server ichida** ishlaydi (`server/bot.js`). Buning sababi: to'lov tasdig'i
+botga keladi, narsani esa bazaga yozish kerak — ikkalasi bitta jarayonda bo'lgani
+uchun hech narsa yo'qolmaydi. (Telegram `getUpdates` ni ikki joyda chaqirishga
+yo'l qo'ymaydi.)
+
+## Sozlash
+
+Render'da **Environment** bo'limiga qo'shing:
+
+| Kalit | Nima uchun | Majburiymi |
+|---|---|---|
+| `BOT_TOKEN` | Bot tokeni — to'lovlar va imzo tekshiruvi | Ha (do'kon uchun) |
+| `BOT_USERNAME` | Taklif havolasi uchun | Tavsiya etiladi |
+| `APP_SHORT_NAME` | Mini App qisqa nomi | Tavsiya etiladi |
+| `WEBAPP_URL` | Bot tugmalari ochadigan manzil (https) | Tavsiya etiladi |
+| `ADMIN_PASSWORD` | Admin paneliga kirish kaliti | Ha (narx o'zgartirish uchun) |
+| `DATA_DIR` | Ma'lumot saqlanadigan katalog | Pastga qarang |
+
+`BOT_TOKEN` bo'lmasa do'kon "faqat ko'rish" rejimida ishlaydi: bepul ko'rinishlar
+tanlanadi, pullik narsalar "Telegram'da" deb ko'rsatiladi.
+
+## ⚠️ Ma'lumot saqlanishi — eng muhim ogohlantirish
+
+Xaridlar oddiy JSON faylda (`DATA_DIR/store.json`) saqlanadi. **Render'ning bepul
+tarifida disk vaqtinchalik**: har deploydan yoki qayta ishga tushishdan keyin fayl
+yo'qoladi — ya'ni odamlar pul to'lab olgan narsalari yo'qoladi.
+
+Haqiqiy sotuvni boshlashdan **oldin** quyidagilardan birini qiling:
+
+1. **Render Disk** ulang (Starter tarif): Dashboard → xizmat → Disks → Add Disk,
+   Mount Path masalan `/var/data`, so'ng `DATA_DIR=/var/data` qilib qo'ying.
+2. Yoki `server/store.js` ni tashqi bazaga (Postgres, Redis) o'tkazing — undagi
+   metodlar (`user`, `grant`, `equip`, `recordPurchase`, `price`) shu maqsadda
+   ajratib yozilgan.
+
+Sinov uchun bepul tarif ham bo'ladi, lekin pul olishdan oldin buni hal qiling.
+
+## Narxlarni o'zgartirish
+
+Admin paneli: **`https://sizning-sayt.com/admin`**
+
+Kirish uchun `ADMIN_PASSWORD` dagi kalitni kiriting (kalit brauzerda sessiya
+davomida saqlanadi, serverga har so'rovda yuboriladi).
+
+Panelda:
+
+- **Narxni o'zgartirish** — maydonga yangi ⭐ sonini yozib "Saqlash". Yangi narx
+  darhol kuchga kiradi, keyingi xarid o'sha narxda bo'ladi.
+- **Qaytarish** — "katalog narxi"ga (koddagi boshlang'ich qiymatga) qaytaradi.
+- **Sotuvdan olish** — narsa do'konda ko'rinmay qoladi (allaqachon sotib olganlar
+  ishlatishda davom etadi).
+- **Xaridlar ro'yxati** va har biri uchun **yulduzlarni qaytarish** tugmasi.
+- Umumiy hisobot: tushum, xaridlar soni, o'yinchilar soni.
+
+Narx chegarasi: 1 dan 100000 gacha butun son. O'zgartirish `store.json` ga
+yoziladi, ya'ni qayta ishga tushirilgandan keyin ham saqlanadi (agar disk doimiy bo'lsa).
+
+### Narxni koddan o'zgartirish
+
+Boshlang'ich narxlar `public/shared/cosmetics.js` da (`price` maydoni). Panelda
+narx o'zgartirilgan bo'lsa, u koddagidan ustun turadi — "Qaytarish" tugmasi
+koddagi qiymatga qaytaradi.
+
+## Yangi ko'rinish qo'shish
+
+`public/shared/cosmetics.js` ga yozuv qo'shing:
+
+```js
+{
+  id: 'token-yangi', slot: 'token', name: 'Yangi fishka',
+  rarity: 'nodir', price: 80,
+  about: 'Qisqacha tavsif',
+  style: { shape: 'star', glow: true },
+}
+```
+
+- `slot`: `token` | `ladder` | `snake` | `board` | `bundle`
+- `rarity`: `free` | `oddiy` | `nodir` | `afsonaviy`
+- `style` — chizuvchi (`public/js/board.js`) tushunadigan parametrlar:
+  - fishka: `shape` (`circle`, `ring`, `gem`, `star`, `crown`), `glow`, `facets`, `metallic`
+  - narvon: `rail` (ikkita rang), `rung`, `wavy`, `glow`, `metallic`
+  - ilon: `hue`, `stripes`, `zigzag`, `spikes`, `glow`
+  - taxta: `light`, `dark`, `accent`, `grid`, `number`, `dark_ui`
+- `grants: [...]` — to'plam yasash uchun (bir xaridda bir nechta narsa ochiladi)
+
+`npm test` katalogni tekshiradi: id takrorlanmasligi, har bo'limda aynan bitta
+bepul variant borligi va narxlar butun son ekanligi.
+
+## Telegram talablari
+
+- **Faqat raqamli tovar** — Stars aynan shu uchun. Jismoniy tovar sotib bo'lmaydi.
+- **Qaytarish imkoniyati bo'lishi shart** — bot `/support` buyrug'iga javob
+  beradi va admin panelida qaytarish tugmasi bor.
+- To'lovdan oldin `pre_checkout_query` ga **10 soniya ichida** javob berish kerak —
+  server buni avtomatik qiladi.
+- Yulduzlarni pulga aylantirish Telegram tomonidan (Fragment orqali) amalga
+  oshiriladi; hozirgi qoida bo'yicha yulduz hisobga tushgach 21 kundan keyin
+  yechish mumkin.
+
+## Sinov
+
+Haqiqiy pul sarflamasdan sinash uchun testlar bor:
+
+```bash
+npm test
+```
+
+`test/payments.test.mjs` soxta Telegram API bilan butun yo'lni tekshiradi:
+hisob-faktura → `pre_checkout` → to'lov → narsa ochilishi → narx o'zgarishi →
+qaytarish. Ya'ni pul yo'li kodda buzilib qolsa, test darhol ko'rsatadi.

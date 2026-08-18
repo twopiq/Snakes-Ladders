@@ -1,0 +1,19 @@
+{
+  "name": "ilon-narvon",
+  "version": "1.0.0",
+  "description": "Ilonlar va Narvonlar - onlayn (2 kishi, real vaqtda) va oflayn (2-6 kishi) o'ynaladigan elektron stol o'yini",
+  "type": "module",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "test": "node --test \"test/*.test.mjs\""
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "ws": "^8.21.3"
+  },
+  "license": "MIT"
+}

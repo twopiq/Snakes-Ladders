@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Do'kon boshqaruvi — Ilonlar va Narvonlar</title>
+<meta name="robots" content="noindex, nofollow" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9A%99%EF%B8%8F%3C/text%3E%3C/svg%3E" />
+<link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">⚙️</span>
+      <span>
+        <strong>Do'kon boshqaruvi</strong>
+        <small>narxlar, sotuv va yulduzlar</small>
+      </span>
+    </div>
+    <div class="topbar-actions">
+      <a class="icon-btn" href="/" title="O'yinga qaytish" style="display:grid;place-items:center;text-decoration:none">🎮</a>
+    </div>
+  </header>
+
+  <main>
+    <!-- Kirish -->
+    <section class="panel" id="loginBox" style="max-width:420px;margin:40px auto">
+      <h3>Admin kaliti</h3>
+      <p class="muted">Server sozlamalaridagi <code>ADMIN_PASSWORD</code> qiymatini kiriting.</p>
+      <input class="text-input" id="key" type="password" placeholder="Kalit" autocomplete="current-password" />
+      <button class="primary big" id="loginBtn" type="button">Kirish</button>
+      <p class="conn-status" id="loginMsg"></p>
+    </section>
+
+    <!-- Panel -->
+    <section id="panel" class="hidden">
+      <div class="stat-row" id="stats"></div>
+
+      <div class="panel" style="margin-top:16px">
+        <h3>Narxlar</h3>
+        <p class="muted">
+          Narx — Telegram Stars (⭐) soni. O'zgartirish darhol kuchga kiradi: keyingi
+          xarid yangi narxda bo'ladi. "Katalog" — kodda yozilgan boshlang'ich narx.
+        </p>
+        <div class="price-table" id="priceTable"></div>
+      </div>
+
+      <div class="panel" style="margin-top:16px">
+        <h3>So'nggi xaridlar</h3>
+        <p class="muted">Yulduzlarni qaytarish Telegram orqali amalga oshiriladi va narsa hisobdan olib qo'yiladi.</p>
+        <div class="purchases" id="purchases"></div>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast-wrap" id="toasts"></div>
+</div>
+<script type="module" src="/js/admin.js"></script>
+</body>
+</html>
