@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#132038"/>
+      <stop offset="1" stop-color="#0B1220"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="42%" r="55%">
+      <stop offset="0" stop-color="#38BDF8" stop-opacity=".38"/>
+      <stop offset="1" stop-color="#38BDF8" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#B45309"/>
+      <stop offset=".5" stop-color="#F59E0B"/>
+      <stop offset="1" stop-color="#FDE68A"/>
+    </linearGradient>
+    <linearGradient id="snake" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#14B8A6"/>
+      <stop offset=".45" stop-color="#22C55E"/>
+      <stop offset="1" stop-color="#4ADE80"/>
+    </linearGradient>
+    <clipPath id="disc"><circle cx="256" cy="256" r="238"/></clipPath>
+  </defs>
+
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <rect width="512" height="512" fill="url(#glow)"/>
+
+  <!-- taxta panjarasi (nozik ishora) -->
+  <g clip-path="url(#disc)" stroke="#38BDF8" stroke-opacity=".10" stroke-width="2">
+    <path d="M64 128H448M64 192H448M64 256H448M64 320H448M64 384H448"/>
+    <path d="M128 64V448M192 64V448M256 64V448M320 64V448M384 64V448"/>
+  </g>
+
+  <!-- narvon + ilon: tik chizilib, keyin diagonalga buriladi -->
+  <g transform="translate(266 226) scale(.80) translate(-256 -256) rotate(38 256 256)">
+    <!-- narvon soyasi -->
+    <g stroke="#000" stroke-opacity=".35" stroke-linecap="round" stroke-width="17" transform="translate(5 7)">
+      <path d="M230 424V112M282 424V112"/>
+    </g>
+    <!-- pog'onalar -->
+    <g stroke="#C2761B" stroke-linecap="round" stroke-width="13">
+      <path d="M228 386H284M228 330H284M228 274H284M228 218H284M228 162H284"/>
+    </g>
+    <!-- yon tayanchlar -->
+    <g stroke="url(#gold)" stroke-linecap="round" stroke-width="17" fill="none">
+      <path d="M230 424V112M282 424V112"/>
+    </g>
+    <!-- yaltirash -->
+    <g stroke="#FFF7DB" stroke-opacity=".55" stroke-linecap="round" stroke-width="4">
+      <path d="M226 404V132M278 404V132"/>
+    </g>
+
+    <!-- ILON: orqa qatlam (narvon ostidan o'tadi) -->
+    <path id="body" d="M300 442 C 210 430 196 388 210 356 C 226 320 320 322 306 282
+                       C 292 244 196 254 206 214 C 214 180 302 186 300 148 C 299 122 276 108 262 100"
+          fill="none" stroke="url(#snake)" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- narvonni ilon ustidan qayta chizamiz -> o'ralgan effekt -->
+  <g transform="translate(266 226) scale(.80) translate(-256 -256) rotate(38 256 256)">
+    <g stroke="#C2761B" stroke-linecap="round" stroke-width="13" opacity=".95">
+      <path d="M228 330H284M228 218H284"/>
+    </g>
+    <g stroke="url(#gold)" stroke-linecap="round" stroke-width="17" fill="none">
+      <path d="M230 350V300M282 350V300M230 238V188M282 238V188"/>
+    </g>
+
+    <!-- ilonning oldinga chiqadigan qismlari -->
+    <use href="#body" stroke-dasharray="78 74" stroke-dashoffset="-40"/>
+
+    <!-- gavda naqshi -->
+    <g fill="#ECFDF5" fill-opacity=".45">
+      <circle cx="262" cy="436" r="6"/><circle cx="212" cy="372" r="6"/>
+      <circle cx="286" cy="300" r="6"/><circle cx="208" cy="232" r="6"/>
+      <circle cx="298" cy="164" r="6"/>
+    </g>
+
+    <!-- BOSH -->
+    <g transform="translate(300 442) rotate(14)">
+      <ellipse rx="34" ry="27" fill="#16A34A"/>
+      <ellipse rx="34" ry="27" fill="none" stroke="#0F5132" stroke-opacity=".35" stroke-width="2"/>
+      <circle cx="10" cy="-11" r="9.5" fill="#FFFFFF"/>
+      <circle cx="10" cy="11" r="9.5" fill="#FFFFFF"/>
+      <circle cx="13" cy="-11" r="4.6" fill="#0F172A"/>
+      <circle cx="13" cy="11" r="4.6" fill="#0F172A"/>
+      <path d="M34 0 h20 m0 0 l10 -7 m-10 7 l10 7" stroke="#EF4444" stroke-width="5"
+            stroke-linecap="round" fill="none"/>
+    </g>
+  </g>
+
+  <!-- yulduzchalar -->
+  <g fill="#FACC15">
+    <path d="M108 132 l6 14 14 6 -14 6 -6 14 -6 -14 -14 -6 14 -6z" opacity=".9"/>
+    <path d="M410 340 l5 11 11 5 -11 5 -5 11 -5 -11 -11 -5 11 -5z" opacity=".75"/>
+    <circle cx="392" cy="120" r="5" opacity=".6"/>
+    <circle cx="120" cy="392" r="4" opacity=".5"/>
+  </g>
+</svg>

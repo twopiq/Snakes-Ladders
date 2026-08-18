@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" width="640" height="360">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#16294A"/><stop offset="1" stop-color="#0B1220"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="30%" cy="52%" r="52%">
+      <stop offset="0" stop-color="#38BDF8" stop-opacity=".26"/>
+      <stop offset="1" stop-color="#38BDF8" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#B45309"/><stop offset=".55" stop-color="#F59E0B"/><stop offset="1" stop-color="#FDE68A"/>
+    </linearGradient>
+    <linearGradient id="snake" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#86EFAC"/><stop offset=".55" stop-color="#22C55E"/><stop offset="1" stop-color="#0D9488"/>
+    </linearGradient>
+    <linearGradient id="board" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F8FAFC" stop-opacity=".13"/>
+      <stop offset="1" stop-color="#F8FAFC" stop-opacity=".05"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="640" height="360" fill="url(#bg)"/>
+  <rect width="640" height="360" fill="url(#glow)"/>
+
+  <!-- TAXTA -->
+  <g transform="translate(196 182) rotate(-7)">
+    <rect x="-146" y="-136" width="292" height="272" rx="14" fill="#0B1220" opacity=".5" transform="translate(6 9)"/>
+    <rect x="-146" y="-136" width="292" height="272" rx="14" fill="url(#board)"/>
+
+    <!-- START va FINISH -->
+    <rect x="-146" y="98" width="38" height="38" fill="#38BDF8" fill-opacity=".45"/>
+    <rect x="108" y="-136" width="38" height="38" fill="#FACC15" fill-opacity=".55"/>
+
+    <g stroke="#CBD5E1" stroke-opacity=".28" stroke-width="1.3">
+      <path d="M-146 -98H146M-146 -60H146M-146 -22H146M-146 16H146M-146 54H146M-146 98H146"/>
+      <path d="M-108 -136V136M-70 -136V136M-32 -136V136M6 -136V136M44 -136V136M82 -136V136M108 -136V136"/>
+    </g>
+    <rect x="-146" y="-136" width="292" height="272" rx="14" fill="none" stroke="#38BDF8" stroke-opacity=".55" stroke-width="2"/>
+
+    <!-- NARVON (taxta ichida, pastdan yuqoriga) -->
+    <g transform="rotate(30 -50 0)">
+      <g stroke="#B45309" stroke-linecap="round" stroke-width="5">
+        <path d="M-70 78H-30M-70 40H-30M-70 2H-30M-70 -36H-30"/>
+      </g>
+      <g stroke="url(#gold)" stroke-linecap="round" stroke-width="7">
+        <path d="M-68 104V-64M-32 104V-64"/>
+      </g>
+    </g>
+
+    <!-- ILON (yuqoridan pastga) -->
+    <path d="M104 -104 C 62 -76 106 -34 74 0 C 44 32 84 66 66 100"
+          fill="none" stroke="url(#snake)" stroke-width="17" stroke-linecap="round"/>
+    <g transform="translate(66 100) rotate(70)">
+      <ellipse rx="17" ry="13.5" fill="#16A34A"/>
+      <circle cx="5" cy="-5.5" r="4.8" fill="#FFF"/><circle cx="5" cy="5.5" r="4.8" fill="#FFF"/>
+      <circle cx="6.6" cy="-5.5" r="2.4" fill="#0F172A"/><circle cx="6.6" cy="5.5" r="2.4" fill="#0F172A"/>
+      <path d="M17 0 h10 m0 0 l5.5 -4 m-5.5 4 l5.5 4" stroke="#EF4444" stroke-width="2.8" stroke-linecap="round" fill="none"/>
+    </g>
+
+    <!-- DONALAR -->
+    <g>
+      <ellipse cx="-112" cy="88" rx="13" ry="5" fill="#000" opacity=".35"/>
+      <circle cx="-112" cy="79" r="14" fill="#EF4444"/>
+      <circle cx="-117" cy="74" r="4.5" fill="#FFF" opacity=".7"/>
+      <ellipse cx="-40" cy="24" rx="13" ry="5" fill="#000" opacity=".35"/>
+      <circle cx="-40" cy="15" r="14" fill="#3B82F6"/>
+      <circle cx="-45" cy="10" r="4.5" fill="#FFF" opacity=".7"/>
+    </g>
+  </g>
+
+  <!-- ZAR (taxta chetiga chiqib turadi) -->
+  <g transform="translate(348 268) rotate(12)">
+    <rect x="-30" y="-30" width="60" height="60" rx="13" fill="#0F172A" opacity=".5" transform="translate(4 6)"/>
+    <rect x="-30" y="-30" width="60" height="60" rx="13" fill="#F8FAFC"/>
+    <rect x="-30" y="-30" width="60" height="60" rx="13" fill="none" stroke="#94A3B8" stroke-opacity=".5" stroke-width="2"/>
+    <g fill="#0F172A">
+      <circle cx="-15" cy="-15" r="5"/><circle cx="15" cy="-15" r="5"/>
+      <circle cx="0" cy="0" r="5"/>
+      <circle cx="-15" cy="15" r="5"/><circle cx="15" cy="15" r="5"/>
+    </g>
+  </g>
+
+  <!-- O'NG TOMON BO'SH: uch tilda sarlavha uchun -->
+  <g fill="#FACC15">
+    <path d="M486 96 l5.5 12 12 5.5 -12 5.5 -5.5 12 -5.5 -12 -12 -5.5 12 -5.5z" opacity=".75"/>
+    <circle cx="574" cy="168" r="4" opacity=".5"/>
+    <path d="M540 262 l4 9 9 4 -9 4 -4 9 -4 -9 -9 -4 9 -4z" opacity=".5"/>
+    <circle cx="602" cy="300" r="3" opacity=".4"/>
+  </g>
+</svg>

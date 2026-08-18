@@ -125,7 +125,9 @@ public/
     engine.js    O'yin qoidalari — sof funksiyalar, umumiy
     cosmetics.js Ko'rinishlar katalogi va narxlari
   admin.html     Narx boshqaruvi sahifasi
+assets/brand/       Bot avatari, muqova va ulashuv rasmlari (SVG + PNG)
 tools/gen-maps.mjs  Xarita generatori
+tools/render-brand.mjs  SVG -> PNG (npm run brand)
 docs/               Telegram Mini App va monetizatsiya yo'riqnomalari
 test/               Qoidalar, xaritalar va onlayn rejim testlari
 ```

@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#152341"/><stop offset="1" stop-color="#0B1220"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="48%" r="55%">
+      <stop offset="0" stop-color="#38BDF8" stop-opacity=".34"/>
+      <stop offset="1" stop-color="#38BDF8" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#B45309"/><stop offset=".55" stop-color="#F59E0B"/><stop offset="1" stop-color="#FDE68A"/>
+    </linearGradient>
+    <linearGradient id="snake" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4ADE80"/><stop offset="1" stop-color="#0D9488"/>
+    </linearGradient>
+    <linearGradient id="ivory" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#D3DCE8"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <rect width="512" height="512" fill="url(#glow)"/>
+
+  <g transform="translate(256 262) scale(.92) translate(-256 -256)">
+    <!-- narvon (chapda, orqada) -->
+    <g transform="rotate(-13 152 268)">
+      <g stroke="#B45309" stroke-linecap="round" stroke-width="12">
+        <path d="M124 356H182M124 306H182M124 256H182M124 206H182"/>
+      </g>
+      <g stroke="url(#gold)" stroke-linecap="round" stroke-width="16">
+        <path d="M126 394V166M180 394V166"/>
+      </g>
+    </g>
+
+    <!-- ilon (o'ngda, orqada) -->
+    <path d="M386 178 C 346 210 402 254 372 292 C 344 328 384 356 374 392"
+          fill="none" stroke="url(#snake)" stroke-width="30" stroke-linecap="round"/>
+    <g transform="translate(386 178) rotate(148)">
+      <ellipse rx="28" ry="22" fill="#16A34A"/>
+      <circle cx="8" cy="-9" r="8" fill="#FFF"/><circle cx="8" cy="9" r="8" fill="#FFF"/>
+      <circle cx="11" cy="-9" r="4" fill="#0F172A"/><circle cx="11" cy="9" r="4" fill="#0F172A"/>
+      <path d="M28 0 h16 m0 0 l8 -6 m-8 6 l8 6" stroke="#EF4444" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+    </g>
+
+    <!-- ZAR (markazda, oldinda) -->
+    <g transform="translate(258 288) rotate(-8)">
+      <rect x="-74" y="-74" width="148" height="148" rx="32" fill="#0F172A" opacity=".5" transform="translate(7 11)"/>
+      <rect x="-74" y="-74" width="148" height="148" rx="32" fill="url(#ivory)"/>
+      <rect x="-74" y="-74" width="148" height="148" rx="32" fill="none" stroke="#94A3B8" stroke-opacity=".55" stroke-width="3"/>
+      <g fill="#0F172A">
+        <circle cx="-39" cy="-39" r="12"/><circle cx="39" cy="-39" r="12"/>
+        <circle cx="0" cy="0" r="12"/>
+        <circle cx="-39" cy="39" r="12"/><circle cx="39" cy="39" r="12"/>
+      </g>
+    </g>
+  </g>
+
+  <g fill="#FACC15">
+    <path d="M110 132 l6 13 13 6 -13 6 -6 13 -6 -13 -13 -6 13 -6z" opacity=".8"/>
+    <circle cx="412" cy="418" r="5" opacity=".55"/>
+  </g>
+</svg>

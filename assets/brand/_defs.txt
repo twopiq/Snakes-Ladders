@@ -1,0 +1,6 @@
+Brend ranglari (o'yin palitrasi bilan bir xil):
+  fon        #0B1220 / #101B30
+  ko'k nur   #38BDF8
+  ilon       #4ADE80 → #22C55E → #14B8A6
+  narvon     #FDE68A → #F59E0B → #B45309
+  oq         #F8FAFC
