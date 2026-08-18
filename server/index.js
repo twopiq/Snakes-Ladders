@@ -5,7 +5,7 @@ import crypto from 'node:crypto';
 
 import { serveStatic } from './static.js';
 import { RoomStore } from './rooms.js';
-import { telegramConfig, telegramEnabled, resolveIdentity, verifyInitData, botToken } from './telegram.js';
+import { telegramConfig, telegramEnabled, resolveIdentity, verifyInitData, botToken, reasonText } from './telegram.js';
 import { Store } from './store.js';
 import { createBot } from './bot.js';
 import { MAPS } from '../public/shared/maps.js';
@@ -95,15 +95,22 @@ wss.on('connection', (ws) => {
 });
 
 /**
- * O'yinchi kimligini aniqlaydi. Telegram ichidan kelgan bo'lsa, ism imzolangan
- * ma'lumotdan olinadi — ya'ni boshqaning ismi bilan kirib bo'lmaydi.
- * Xato bo'lsa mijozga xabar yuboriladi va null qaytadi.
+ * O'yinchi kimligini aniqlaydi.
+ *
+ * Telegram imzosi to'g'ri bo'lsa — ism profildan olinadi (ishonchli).
+ * Imzo tekshiruvi o'tmasa (masalan serverda noto'g'ri BOT_TOKEN) — O'YIN TO'XTAMAYDI:
+ * o'yinchi o'zi kiritgan ism bilan davom etadi, xuddi saytdagidek. Sozlama xatosi
+ * tufayli odamlarni o'ynashdan to'xtatib qo'yish noto'g'ri bo'lardi.
+ * (Xavfsizlik jihatidan yomonlashuv yo'q: initData yubormasdan ham shu holat bo'lardi.)
  */
 function identify(ws, msg) {
   const ident = resolveIdentity({ initData: msg.initData, name: msg.name });
   if (msg.initData && telegramEnabled && !ident.verified) {
-    send(ws, { t: 'error', msg: 'Telegram tekshiruvidan o\'tmadi — ilovani qayta oching' });
-    return null;
+    if (!ws.warnedAuth) {
+      ws.warnedAuth = true;
+      console.warn(`initData tekshiruvi o'tmadi: ${ident.error} (${reasonText(ident.error)})`);
+    }
+    return { name: msg.name || null, tgId: null, verified: false };
   }
   return ident;
 }
@@ -333,7 +340,7 @@ function adminOk(req) {
 function shopUser(body) {
   if (!telegramEnabled) return { ok: false, error: 'Do\'kon faqat Telegram ichida ishlaydi' };
   const res = verifyInitData(body.initData);
-  if (!res.ok) return { ok: false, error: 'Telegram tekshiruvidan o\'tmadi' };
+  if (!res.ok) return { ok: false, error: reasonText(res.reason), reason: res.reason };
   return { ok: true, tgId: res.user.id, name: res.user.name };
 }
 
@@ -346,10 +353,18 @@ async function handleApi(req, res, url) {
     if (!adminOk(req)) return json(res, 401, { error: 'Kalit noto\'g\'ri' });
 
     if (path === '/api/admin/overview') {
+      const cfg = telegramConfig();
+      const linked = bot?.info?.username || null;
       return json(res, 200, {
         items: catalogForClient(),
         stats: shop.stats(),
         starsEnabled: Boolean(bot),
+        telegram: {
+          tokenSet: telegramEnabled,
+          botUsername: linked,                       // token haqiqatda qaysi botniki
+          configuredUsername: cfg.botUsername || null, // BOT_USERNAME nima deb yozilgan
+          mismatch: Boolean(linked && cfg.botUsername && linked.toLowerCase() !== cfg.botUsername.toLowerCase()),
+        },
       });
     }
 
@@ -387,7 +402,7 @@ async function handleApi(req, res, url) {
   }
 
   const who = shopUser(body);
-  if (!who.ok) return json(res, 401, { error: who.error });
+  if (!who.ok) return json(res, 401, { error: who.error, reason: who.reason });
 
   if (path === '/api/shop/profile') {
     const user = shop.user(who.tgId);

@@ -279,10 +279,12 @@ test('Telegram: imzolangan o\'yinchi ismi Telegram profilidan olinadi', async (t
   const joinedA = await a.take('joined');
   assert.equal(joinedA.room.players[0].name, 'Ali');
 
-  // Buzilgan imzo bilan kirish mumkin emas
+  // Imzo noto'g'ri bo'lsa (masalan serverda boshqa BOT_TOKEN) — o'yin baribir ishlaydi,
+  // faqat ism Telegram'dan emas, o'yinchi kiritganidan olinadi.
   b.send({ t: 'join', code: joinedA.code, name: 'Vali', initData: makeInitData({ token: 'soxta:token' }) });
-  const err = await b.take('error');
-  assert.match(err.msg, /Telegram/);
+  const joinedB = await b.take('joined');
+  assert.equal(joinedB.room.players[1].name, 'Vali', 'sozlama xatosi o\'yinni to\'xtatmaydi');
+  assert.ok(joinedB.room.state, 'o\'yin boshlandi');
 
   a.close();
   b.close();

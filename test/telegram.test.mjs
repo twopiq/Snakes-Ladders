@@ -13,6 +13,19 @@ test("to'g'ri imzolangan initData qabul qilinadi", () => {
   assert.equal(res.user.username, 'ali');
 });
 
+test("signature maydoni bo'lgan initData qabul qilinadi (yangi Telegram versiyalari)", () => {
+  // Telegram HMAC ni hisoblaganda faqat "hash" chiqariladi; "signature" satr ichida qoladi.
+  const raw = makeInitData();
+  assert.ok(raw.includes('signature='), 'sinov ma\'lumotida signature bo\'lishi kerak');
+  assert.equal(verifyInitData(raw, { botToken: BOT_TOKEN }).ok, true);
+});
+
+test("signature yo'q eski initData ham qabul qilinadi", () => {
+  const raw = makeInitData({ omitSignature: true });
+  assert.ok(!raw.includes('signature='));
+  assert.equal(verifyInitData(raw, { botToken: BOT_TOKEN }).ok, true);
+});
+
 test("boshqa bot tokeni bilan imzolangan ma'lumot rad etiladi", () => {
   const res = verifyInitData(makeInitData({ token: 'boshqa:token' }), { botToken: BOT_TOKEN });
   assert.equal(res.ok, false);

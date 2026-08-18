@@ -45,7 +45,8 @@ async function refresh() {
   }
 }
 
-function render({ items, stats, starsEnabled }) {
+function render({ items, stats, starsEnabled, telegram }) {
+  renderDiagnostics(telegram, starsEnabled);
   $('#stats').innerHTML = `
     <div class="stat"><b>${stats.starsTotal}</b><span>⭐ jami tushum</span></div>
     <div class="stat"><b>${stats.purchases}</b><span>xarid</span></div>
@@ -96,6 +97,40 @@ function render({ items, stats, starsEnabled }) {
     : '<p class="muted">Hozircha xarid yo\'q.</p>';
 
   bind();
+}
+
+/** Telegram sozlamasi to'g'rimi — eng ko'p uchraydigan xatolarni ko'rsatadi. */
+function renderDiagnostics(tg = {}, starsEnabled) {
+  const box = document.getElementById('diag');
+  if (!box) return;
+
+  const rows = [];
+  rows.push(tg.tokenSet
+    ? ['ok', 'BOT_TOKEN', "o'rnatilgan"]
+    : ['bad', 'BOT_TOKEN', "yo'q — do'kon va imzo tekshiruvi ishlamaydi"]);
+
+  if (tg.tokenSet) {
+    rows.push(tg.botUsername
+      ? ['ok', 'Token qaysi botniki', `@${tg.botUsername}`]
+      : ['bad', 'Token qaysi botniki', "Telegram'ga ulanib bo'lmadi (token noto'g'ri yoki tarmoq yopiq)"]);
+  }
+  if (tg.configuredUsername) {
+    rows.push(tg.mismatch
+      ? ['bad', 'BOT_USERNAME', `@${tg.configuredUsername} — token boshqa botniki! Mini App shu botga ulanganiga ishonch hosil qiling`]
+      : ['ok', 'BOT_USERNAME', `@${tg.configuredUsername}`]);
+  } else {
+    rows.push(['warn', 'BOT_USERNAME', "yo'q — saytdan Telegram'ga yo'naltirish ishlamaydi"]);
+  }
+  rows.push(starsEnabled
+    ? ['ok', "Stars to'lovi", 'yoqilgan']
+    : ['bad', "Stars to'lovi", "o'chiq (BOT_TOKEN yoki bot ulanmagan)"]);
+
+  box.innerHTML = `<h3>Telegram holati</h3>` + rows.map(([k, name, val]) => `
+    <div class="diag-row ${k}">
+      <span>${k === 'ok' ? '✅' : k === 'warn' ? '⚠️' : '❌'}</span>
+      <b>${name}</b>
+      <span>${val}</span>
+    </div>`).join('');
 }
 
 function bind() {

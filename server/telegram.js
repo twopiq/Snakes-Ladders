@@ -10,9 +10,9 @@
 
 import crypto from 'node:crypto';
 
-const BOT_TOKEN = process.env.BOT_TOKEN || '';
-const BOT_USERNAME = (process.env.BOT_USERNAME || '').replace(/^@/, '');
-const APP_SHORT_NAME = process.env.APP_SHORT_NAME || '';
+const BOT_TOKEN = (process.env.BOT_TOKEN || '').trim();
+const BOT_USERNAME = (process.env.BOT_USERNAME || '').trim().replace(/^@/, '');
+const APP_SHORT_NAME = (process.env.APP_SHORT_NAME || '').trim();
 const MAX_AGE_SEC = 24 * 60 * 60;
 
 export const telegramEnabled = Boolean(BOT_TOKEN);
@@ -51,8 +51,11 @@ export function verifyInitData(initData, { botToken = BOT_TOKEN, maxAgeSec = MAX
   const hash = params.get('hash');
   if (!hash || !/^[0-9a-f]{64}$/i.test(hash)) return { ok: false, reason: 'hash-yoq' };
 
+  // MUHIM: Telegram HMAC tekshiruvida faqat "hash" chiqariladi.
+  // "signature" (uchinchi tomon uchun Ed25519 imzosi) satr ichida QOLISHI kerak —
+  // aks holda hash hech qachon mos kelmaydi (yangi Telegram versiyalari uni yuboradi).
   const dataCheckString = [...params.entries()]
-    .filter(([key]) => key !== 'hash' && key !== 'signature')
+    .filter(([key]) => key !== 'hash')
     .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
     .map(([key, value]) => `${key}=${value}`)
     .join('\n');
@@ -97,7 +100,18 @@ export function resolveIdentity({ initData, name }) {
   if (initData && telegramEnabled) {
     const res = verifyInitData(initData);
     if (res.ok) return { name: res.user.name, tgId: res.user.id, verified: true };
-    return { name: null, tgId: null, verified: false, error: res.reason };
+    return { name: name || null, tgId: null, verified: false, error: res.reason };
   }
   return { name: name || null, tgId: null, verified: false };
+}
+
+/** Xato sababini odam tushunadigan matnga aylantiradi. */
+export function reasonText(reason) {
+  switch (reason) {
+    case 'bot-token-yoq': return 'Serverda BOT_TOKEN sozlanmagan';
+    case 'hash-mos-emas': return 'Server tokeni bu ilovaning botiga tegishli emas';
+    case 'muddati-otgan': return 'Ma\'lumot eskirgan — ilovani qayta oching';
+    case 'bosh': case 'hash-yoq': return 'Telegram ma\'lumoti yuborilmadi';
+    default: return 'Telegram tekshiruvi muvaffaqiyatsiz';
+  }
 }

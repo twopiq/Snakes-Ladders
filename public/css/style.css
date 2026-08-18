@@ -811,3 +811,25 @@ a:hover { color: #7dd3fc; }
   .promo button.primary, .promo button.ghost { grid-column: 1 / -1; width: 100%; }
   .promo.inline { grid-template-columns: auto 1fr; }
 }
+
+/* admin: Telegram holati */
+.diag-row {
+  display: grid;
+  grid-template-columns: auto 180px 1fr;
+  gap: 10px;
+  align-items: center;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+.diag-row.bad { border-color: #7f1d1d; }
+.diag-row.warn { border-color: #78350f; }
+.diag-row b { color: var(--muted); font-weight: 600; }
+@media (max-width: 620px) {
+  .diag-row { grid-template-columns: auto 1fr; }
+  .diag-row b { grid-column: 2; }
+  .diag-row span:last-child { grid-column: 2; }
+}

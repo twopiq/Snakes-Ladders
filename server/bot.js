@@ -207,6 +207,7 @@ export function createBot({ token, store, webappUrl = '' }) {
 
   async function setup() {
     const me = await call('getMe');
+    api.info = { id: me.id, username: me.username };
     console.log(`Telegram bot ulandi: @${me.username}`);
     if (webappUrl.startsWith('https://')) {
       await call('setChatMenuButton', {
@@ -257,7 +258,8 @@ export function createBot({ token, store, webappUrl = '' }) {
     poll();
   }
 
-  return { start, stop: () => { running = false; }, createInvoice, refund, call };
+  const api = { start, stop: () => { running = false; }, createInvoice, refund, call, info: null };
+  return api;
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

@@ -94,8 +94,22 @@ xuddi shunday ishlaydi: `https://sayt.com/?room=AB12`.
 
 ## Tez-tez uchraydigan muammolar
 
-**"Telegram tekshiruvidan o'tmadi"** — `BOT_TOKEN` noto'g'ri yoki boshqa botniki.
-Token Mini App ro'yxatdan o'tkazilgan bot bilan bir xil bo'lishi shart.
+**"Telegram tekshiruvidan o'tmadi" / "Server tokeni bu ilovaning botiga tegishli emas"**
+
+Tartib bilan tekshiring:
+
+1. `https://sizning-sayt.com/admin` ochib, **"Telegram holati"** bo'limiga qarang.
+   U yerda token *haqiqatda qaysi botga* tegishli ekani yozilgan (`@...`).
+   Agar u Mini App ro'yxatdan o'tgan botdan farq qilsa — `BOT_TOKEN` noto'g'ri.
+2. Token nusxalanganda bo'sh joy yoki qator ko'chishi tushib qolmaganiga ishonch
+   hosil qiling (server tokenni avtomatik `trim` qiladi, lekin Render'da ba'zan
+   qiymat ikki qatorga bo'linib ketadi).
+3. Ilovani Telegram'da butunlay yopib, qaytadan oching: `initData` 24 soatdan
+   keyin eskiradi.
+
+Eslatma: bu xato **o'yinni to'xtatmaydi** — imzo tekshiruvi o'tmasa, o'yinchi
+o'zi kiritgan ism bilan o'ynayveradi. Faqat do'kon (Stars xaridlari) ishlamaydi,
+chunki xarid Telegram hisobiga bog'lanishi shart.
 
 **Mini App oq ekran** — Web App URL albatta `https://` bo'lishi kerak, `http://` ishlamaydi.
 
