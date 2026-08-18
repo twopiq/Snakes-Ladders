@@ -9,6 +9,7 @@
 import { Board } from './board.js';
 import { SLOTS, SLOT_NAMES, RARITY, defaultEquipped, getItem } from '../shared/cosmetics.js';
 import { isTelegram, initData, openInvoice, haptic, tgConfig } from './telegram.js';
+import { canPromote, openTelegramApp, LOCK_LABEL } from './promo.js';
 import { $, toast, showModal, hideModal } from './ui.js';
 import { escapeHtml } from './game-view.js';
 
@@ -98,9 +99,13 @@ export function renderShop() {
   const note = $('#shopNote');
   if (!isTelegram()) {
     note.classList.remove('hidden');
-    note.innerHTML = tgConfig().inviteBase
-      ? `Pullik ko'rinishlar Telegram ilovasi ichida sotiladi. <a href="${escapeHtml(tgConfig().inviteBase.replace('?startapp=', ''))}" target="_blank" rel="noopener">Telegram'da ochish →</a>`
-      : "Pullik ko'rinishlar Telegram ilovasi ichida sotiladi.";
+    note.innerHTML = canPromote()
+      ? `Pullik ko'rinishlar Telegram Stars (⭐) orqali sotiladi — xarid faqat Telegram ilovasida ishlaydi.
+         <button class="link-btn" type="button" data-open-tg="1">Telegram'da ochish →</button>`
+      : "Pullik ko'rinishlar Telegram ilovasi ichida sotiladi. Bepul variantlar bu yerda ham tanlanadi.";
+    for (const el of note.querySelectorAll('[data-open-tg]')) {
+      el.addEventListener('click', () => openTelegramApp());
+    }
   } else {
     note.classList.add('hidden');
   }
@@ -126,6 +131,9 @@ export function renderShop() {
   for (const el of root.querySelectorAll('[data-equip]')) {
     el.addEventListener('click', () => equip(el.dataset.slot, el.dataset.equip));
   }
+  for (const el of root.querySelectorAll('[data-open-tg]')) {
+    el.addEventListener('click', () => openTelegramApp());
+  }
   for (const canvas of root.querySelectorAll('canvas[data-preview]')) {
     drawPreview(canvas, canvas.dataset.preview);
   }
@@ -142,20 +150,22 @@ function card(item) {
   const canBuyHere = isTelegram() && state.starsEnabled;
 
   let action;
-  if (item.slot === 'bundle') {
-    action = isOwned
-      ? '<span class="shop-owned">Sizda bor ✓</span>'
-      : canBuyHere
-        ? `<button class="primary" data-buy="${item.id}">⭐ ${item.price} — olish</button>`
-        : `<button class="ghost" disabled>⭐ ${item.price} · Telegram'da</button>`;
+  const locked = canPromote()
+    ? `<button class="ghost tg-open" data-open-tg="1">⭐ ${item.price} · ${LOCK_LABEL}</button>`
+    : `<button class="ghost" disabled title="Telegram ilovasida sotiladi">⭐ ${item.price} · Telegram'da</button>`;
+
+  if (isOwned && item.slot === 'bundle') {
+    action = '<span class="shop-owned">Sizda bor ✓</span>';
   } else if (isEquipped) {
     action = '<span class="shop-owned">Kiyilgan ✓</span>';
   } else if (isOwned) {
     action = `<button class="ghost" data-equip="${item.id}" data-slot="${item.slot}">Kiyish</button>`;
   } else if (canBuyHere) {
-    action = `<button class="primary" data-buy="${item.id}">⭐ ${item.price}</button>`;
+    action = item.slot === 'bundle'
+      ? `<button class="primary" data-buy="${item.id}">⭐ ${item.price} — olish</button>`
+      : `<button class="primary" data-buy="${item.id}">⭐ ${item.price}</button>`;
   } else {
-    action = `<button class="ghost" disabled title="Telegram ilovasida sotiladi">⭐ ${item.price} · Telegram'da</button>`;
+    action = locked;
   }
 
   const bundleList = item.grants

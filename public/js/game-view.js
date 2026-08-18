@@ -8,6 +8,7 @@ import { getMap } from '../shared/maps.js';
 import { stepPath } from '../shared/engine.js';
 import { sound } from './sound.js';
 import { haptic } from './telegram.js';
+import { promoModalHtml } from './promo.js';
 import { $, toast, showModal, hideModal } from './ui.js';
 
 const PIPS = {
@@ -420,10 +421,12 @@ export class GameView {
     showModal(`
       <h2>🏆 ${escapeHtml(state.ranking[0]?.name || '')} g'olib!</h2>
       <ul class="rank-list">${rows}</ul>
+      ${promoModalHtml()}
       <div class="modal-actions">
         <button class="primary" data-act="rematch">Qayta o'ynash</button>
         <button class="ghost" data-act="menu">Menyu</button>
       </div>`, (act) => {
+      if (act === 'telegram') return this.on.onTelegram?.();
       hideModal();
       if (act === 'rematch') this.on.onRematch?.();
       if (act === 'menu') this.on.onLeave?.();

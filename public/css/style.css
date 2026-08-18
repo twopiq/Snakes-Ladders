@@ -760,3 +760,54 @@ a { color: var(--accent); }
 a:hover { color: #7dd3fc; }
 
 .shop-preview { width: 116px; height: 100px; }
+
+/* ---------- Telegram'ga yo'naltirish ---------- */
+.promo-slot { margin-bottom: 16px; }
+
+.promo {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  gap: 14px;
+  align-items: center;
+  background: linear-gradient(120deg, rgba(56, 189, 248, .12), rgba(34, 197, 94, .1));
+  border: 1px solid #2f6c8f;
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+.promo.inline { margin: 14px 0 0; background: var(--panel-2); border-color: var(--line); }
+.promo-emoji { font-size: 28px; }
+.promo-text b { display: block; font-size: 15px; margin-bottom: 3px; }
+.promo-text small { color: var(--muted); font-size: 12.5px; line-height: 1.5; display: block; }
+.promo button.primary, .promo button.ghost { white-space: nowrap; }
+.promo-close {
+  background: none;
+  border: 0;
+  color: var(--muted);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 6px;
+  align-self: start;
+}
+.promo-close:hover { color: var(--text); }
+
+.tg-open { border-color: #2f6c8f; }
+
+.link-btn {
+  background: none;
+  border: 0;
+  color: var(--accent);
+  font: inherit;
+  font-size: inherit;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+.link-btn:hover { color: #7dd3fc; }
+
+@media (max-width: 560px) {
+  .promo { grid-template-columns: auto 1fr auto; padding-top: 12px; }
+  .promo button.primary, .promo button.ghost { grid-column: 1 / -1; width: 100%; }
+  .promo.inline { grid-template-columns: auto 1fr; }
+}

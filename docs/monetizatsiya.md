@@ -105,6 +105,24 @@ koddagi qiymatga qaytaradi.
 `npm test` katalogni tekshiradi: id takrorlanmasligi, har bo'limda aynan bitta
 bepul variant borligi va narxlar butun son ekanligi.
 
+## Sayt versiyasidan Telegram'ga yo'naltirish
+
+Stars faqat Telegram ichida ishlagani uchun sayt versiyasidagi o'yinchi uch joyda
+Telegram ilovasiga taklif qilinadi:
+
+| Joy | Ko'rinishi |
+|---|---|
+| Menyu | Yuqorida banner: "Telegram'da ko'proq imkoniyat" + tugma. Yopib qo'ysa 7 kun ko'rinmaydi |
+| Do'kon | Har bir pullik kartochkada "⭐ narx · Telegram'da ochish" tugmasi |
+| O'yin tugagach | Natijalar oynasida: "Fishkangizni almashtirasizmi?" + Ochish tugmasi |
+| Onlayn xona | "Telegram havolasi" tugmasi — do'st havolani bossa, to'g'ridan-to'g'ri o'sha xonaga Telegram ichida kiradi |
+
+Bularning hammasi **faqat** `BOT_USERNAME` sozlangan bo'lsa va o'yinchi Telegram
+ichida bo'lmasa ko'rsatiladi. Telegram ichida hech qanday taklif chiqmaydi.
+
+Havola shakli: `https://t.me/<BOT_USERNAME>/<APP_SHORT_NAME>` (xona chaqirig'ida
+oxiriga `?startapp=KOD` qo'shiladi).
+
 ## Telegram talablari
 
 - **Faqat raqamli tovar** — Stars aynan shu uchun. Jismoniy tovar sotib bo'lmaydi.

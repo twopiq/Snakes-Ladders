@@ -5,6 +5,7 @@ import { createGame, applyRoll, rollDice, DEFAULT_RULES, PLAYER_COLORS, MIN_PLAY
 import { GameView, escapeHtml } from './game-view.js';
 import { OnlineClient } from './online.js';
 import { loadShop, renderShop, equippedNow, onEquipChange } from './shop.js';
+import { renderMenuPromo, openTelegramApp, canPromote, telegramAppLink } from './promo.js';
 import { sound } from './sound.js';
 import {
   isTelegram, initTelegram, loadConfig, tgUserName, initData, startParam,
@@ -62,6 +63,7 @@ const view = new GameView({
   },
   onRematch: () => (S.mode === 'offline' ? offlineRematch() : onlineRematch()),
   onLeave: () => leaveGame(),
+  onTelegram: () => openTelegramApp(),
   onChat: (text) => {
     if (S.mode === 'online') net.chat(text);
   },
@@ -203,6 +205,7 @@ async function init() {
 
   await loadConfig();
   initTelegram({ onBack: handleBack });
+  renderMenuPromo($('#menuPromo'));
   loadShop().then(() => {
     if ($('#screen-shop').classList.contains('active')) renderShop();
   });
@@ -422,8 +425,16 @@ function showWaitingRoom(room) {
     <div class="modal-actions">
       <button class="primary" data-act="invite">Do'stni chaqirish</button>
       <button class="ghost" data-act="copy">Kodni nusxalash</button>
+      ${canPromote() ? '<button class="ghost" data-act="tg-invite">Telegram havolasi</button>' : ''}
       <button class="ghost" data-act="cancel">Bekor qilish</button>
     </div>`, (act) => {
+    if (act === 'tg-invite') {
+      const link = telegramAppLink(room.code);
+      navigator.clipboard?.writeText(link).then(
+        () => toast('Telegram havolasi nusxalandi'),
+        () => toast(link),
+      );
+    }
     if (act === 'invite') {
       const how = shareRoom(room.code);
       if (how === 'clipboard') toast('Taklif havolasi nusxalandi');

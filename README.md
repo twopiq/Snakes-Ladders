@@ -89,6 +89,10 @@ Ko'rinishlar Telegram Stars orqali sotiladi, narxlarni admin panelidan
 Har bir bo'limda bitta bepul variant bor — hech narsa sotib olmagan o'yinchi ham
 to'liq o'ynaydi.
 
+Sayt versiyasida Stars ishlamaydi (Telegram cheklovi), shuning uchun saytdagi
+o'yinchi menyu banneri, do'kondagi tugma va o'yin natijasi orqali Telegram
+ilovasiga taklif qilinadi — bepul ko'rinishlar esa saytda ham tanlanadi.
+
 To'liq yo'riqnoma: [docs/monetizatsiya.md](docs/monetizatsiya.md)
 (muhim: doimiy disk sozlanmasa, xaridlar deploydan keyin yo'qoladi).
 
@@ -112,6 +116,7 @@ public/
     online.js    WebSocket mijozi (yurak urishi, qayta ulanish, sinxronlash)
     telegram.js  Telegram Mini App integratsiyasi
     shop.js      Do'kon: ko'rinishlar, Stars xaridlari
+    promo.js     Saytdan Telegram ilovasiga yo'naltirish
     admin.js     Admin paneli (narxlar, xaridlar, qaytarish)
     sound.js     Ovoz effektlari
     ui.js        DOM yordamchilari
