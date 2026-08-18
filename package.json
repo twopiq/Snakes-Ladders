@@ -1,7 +1,7 @@
 {
   "name": "ilon-narvon",
   "version": "1.0.0",
-  "description": "Ilonlar va Narvonlar - onlayn (2 kishi, real vaqtda) va oflayn (2-6 kishi) o'ynaladigan elektron stol o'yini",
+  "description": "Ilonlar va Narvonlar - onlayn (2-4 kishi, real vaqtda) va oflayn (2-6 kishi) o'ynaladigan elektron stol o'yini",
   "type": "module",
   "main": "server/index.js",
   "scripts": {

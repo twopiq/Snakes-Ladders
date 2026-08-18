@@ -24,7 +24,7 @@ Yana BotFather'da:
 /newapp
 → botni tanlang
 → Title:        Ilonlar va Narvonlar
-→ Description:  2 kishi onlayn yoki 6 kishi bitta telefonda o'ynaladigan klassik o'yin
+→ Description:  2-4 kishi onlayn yoki 6 kishi bitta telefonda o'ynaladigan klassik o'yin
 → Photo:        640x360 rasm
 → Web App URL:  https://snakes-ladders-2jjq.onrender.com
 → Short name:   oyin        ← havolada shu ishlatiladi

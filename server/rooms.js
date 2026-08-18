@@ -1,5 +1,5 @@
 /**
- * Onlayn xonalar (2 kishilik real vaqt rejimi) uchun holat boshqaruvi.
+ * Onlayn xonalar (2-4 kishilik real vaqt rejimi) uchun holat boshqaruvi.
  * Zar serverda tashlanadi — mijoz faqat "tashladim" deb so'raydi, natijani server hal qiladi.
  */
 
@@ -9,7 +9,7 @@ import { getMap } from '../public/shared/maps.js';
 
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // chalkash belgilarsiz
 export const MIN_SEATS = 2;
-export const MAX_SEATS = 3; // onlayn xonada eng ko'pi 3 kishi
+export const MAX_SEATS = 4; // onlayn xonada eng ko'pi 4 kishi
 const ROOM_TTL_MS = 30 * 60 * 1000; // hamma uzilgach xona shuncha vaqt saqlanadi
 const RECONNECT_MS = 60 * 1000;
 
@@ -56,7 +56,7 @@ export class Room {
     this.code = code;
     this.mapId = getMap(mapId).id;
     this.rules = normalizeRules(rules);
-    // Nechta o'yinchiga mo'ljallangan (2 yoki 3)
+    // Nechta o'yinchiga mo'ljallangan (2 dan 4 gacha)
     this.capacity = Math.min(MAX_SEATS, Math.max(MIN_SEATS, Number(capacity) || MIN_SEATS));
     /** @type {Array<{token:string,name:string,seat:number,ws:any,online:boolean,lastSeen:number}>} */
     this.players = [];

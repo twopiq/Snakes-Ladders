@@ -32,7 +32,7 @@ const S = {
   },
   online: {
     mapId: MAPS[0].id,
-    capacity: 2, // onlayn xonada 2 yoki 3 kishi
+    capacity: 2, // onlayn xonada 2 dan 4 gacha
     rules: { ...DEFAULT_RULES, playToLast: false },
     room: null,
     mySeat: null,
@@ -305,9 +305,9 @@ function changeCount(delta) {
   renderPlayerInputs();
 }
 
-/** Onlayn xona sig'imi: 2 yoki 3 kishi. */
+/** Onlayn xona sig'imi: 2 dan 4 gacha. */
 function changeOnlineCount(delta) {
-  S.online.capacity = Math.max(2, Math.min(3, S.online.capacity + delta));
+  S.online.capacity = Math.max(2, Math.min(4, S.online.capacity + delta));
   $('#onlineCount').textContent = S.online.capacity;
 }
 
@@ -526,7 +526,7 @@ function showHelp() {
     </ul>
     <h2 style="font-size:17px;margin-top:18px">Rejimlar</h2>
     <ul>
-      <li><b>Onlayn:</b> 2 yoki 3 kishi, real vaqtda. Xona kodi yoki tezkor juftlash orqali. Aloqa uzilsa 60 soniya ichida qaytish mumkin.</li>
+      <li><b>Onlayn:</b> 2 dan 4 kishigacha, real vaqtda. Xona kodi yoki tezkor juftlash orqali. Aloqa uzilsa 60 soniya ichida qaytish mumkin.</li>
       <li><b>Oflayn:</b> bitta qurilmada 2–6 kishi navbat bilan.</li>
     </ul>
     <p style="margin-top:14px">Zar tashlash uchun <b>Bo'sh joy</b> tugmasini ham bosish mumkin.</p>

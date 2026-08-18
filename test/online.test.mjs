@@ -188,6 +188,69 @@ test('3 kishilik xona: uchinchi o\'yinchi qo\'shilgach o\'yin boshlanadi', async
   c.close();
 });
 
+test('4 kishilik xona: to\'rtinchi qo\'shilgach boshlanadi va navbat aylanadi', async (t) => {
+  await startServer();
+  t.after(() => server.kill());
+
+  const cl = [client(), client(), client(), client()];
+  await Promise.all(cl.map((c) => c.open()));
+  const [a, b, c, d] = cl;
+
+  // Navbat qat'iy aylanishi uchun qo'shimcha yurish beruvchi qoidalarni o'chiramiz
+  a.send({
+    t: 'create', name: 'Ali', mapId: 'tezkor120', capacity: 4,
+    rules: { sixExtraTurn: false, specialCells: false },
+  });
+  const joinedA = await a.take('joined');
+  assert.equal(joinedA.room.capacity, 4);
+
+  b.send({ t: 'join', code: joinedA.code, name: 'Vali' });
+  await b.take('joined');
+  c.send({ t: 'join', code: joinedA.code, name: 'Hasan' });
+  const joinedC = await c.take('joined');
+  assert.equal(joinedC.room.state, null, 'uch kishi bilan hali boshlanmaydi');
+  assert.equal(joinedC.room.canStartEarly, true);
+
+  d.send({ t: 'join', code: joinedA.code, name: 'Husan' });
+  const joinedD = await d.take('joined');
+  assert.equal(joinedD.seat, 3);
+  assert.ok(joinedD.room.state, 'to\'rtinchi qo\'shilgach o\'yin boshlanadi');
+  assert.deepEqual(joinedD.room.state.players.map((p) => p.name), ['Ali', 'Vali', 'Hasan', 'Husan']);
+  assert.equal(new Set(joinedD.room.players.map((p) => p.color)).size, 4, 'har kimga alohida rang');
+
+  // Beshinchi kira olmaydi
+  const e = client();
+  await e.open();
+  e.send({ t: 'join', code: joinedA.code, name: 'Bekzod' });
+  const err = await e.take('error');
+  assert.match(err.msg, /to'lgan|boshlangan/);
+  e.close();
+
+  // Navbat aylanadi: 0 -> 1 -> 2 -> 3
+  const seats = [];
+  for (const one of cl) {
+    one.send({ t: 'roll' });
+    const roll = await one.take('roll');
+    seats.push(roll.room.state.lastRoll.playerId);
+    await Promise.all(cl.filter((x) => x !== one).map((x) => x.take('roll')));
+  }
+  assert.deepEqual(seats, ['seat0', 'seat1', 'seat2', 'seat3'], 'navbat to\'rt o\'yinchi bo\'ylab aylanadi');
+
+  cl.forEach((x) => x.close());
+});
+
+test('xona sig\'imi 4 tadan oshmaydi', async (t) => {
+  await startServer();
+  t.after(() => server.kill());
+
+  const a = client();
+  await a.open();
+  a.send({ t: 'create', name: 'Ali', mapId: 'klassik130', capacity: 9 });
+  const joined = await a.take('joined');
+  assert.equal(joined.room.capacity, 4, 'katta son 4 gacha qisqartiriladi');
+  a.close();
+});
+
 test('3 kishilik xona: egasi ikki kishi bilan erta boshlaydi', async (t) => {
   await startServer();
   t.after(() => server.kill());

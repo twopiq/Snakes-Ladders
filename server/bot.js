@@ -137,7 +137,7 @@ export function createBot({ token, store, webappUrl = '' }) {
           '',
           "Klassik taxta o'yinining elektron ko'rinishi.",
           '',
-          '• <b>Onlayn</b> — 2 kishi, real vaqtda',
+          '• <b>Onlayn</b> — 2 dan 4 kishigacha, real vaqtda',
           '• <b>Oflayn</b> — bitta telefonda 2-6 kishi',
           "• Do'konda fishka, narvon, ilon va taxta ko'rinishlari",
           '',

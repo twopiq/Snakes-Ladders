@@ -188,7 +188,7 @@ function handle(ws, msg) {
     }
 
     case 'start': {
-      // Xona egasi to'lmagan xonada o'yinni boshlaydi (masalan 3 kishilik xonada 2 kishi)
+      // Xona egasi to'lmagan xonada o'yinni boshlaydi (masalan 4 kishilik xonada 2 kishi)
       const room = requireRoom(ws);
       if (!room) return;
       const result = room.startEarly(ws.ctx.token);
