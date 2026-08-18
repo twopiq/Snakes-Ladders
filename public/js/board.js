@@ -17,12 +17,24 @@ export class Board {
     this.showLabels = true; // do'kondagi kichik namunalarda o'chiriladi
     this.rafOk = true; // animatsiya kadrlari kelayaptimi (fon rejimida kelmaydi)
     this.skins = resolveStyles({});
+    // Statik qatlam: kataklar, narvon/ilonlar va raqamlar shu yerda bir marta
+    // chiziladi. Har kadrda ularni qayta chizish katta taxtada telefonni
+    // qiynaydi — endi kadrga faqat tayyor rasm + donalar tushadi.
+    this.bg = document.createElement('canvas');
+    this.bgDirty = true;
+    this._bgLabels = null;
     this.setMap(map);
     this._raf = null;
   }
 
+  /** Statik qatlamni qayta chizishga belgi qo'yadi. */
+  invalidate() {
+    this.bgDirty = true;
+  }
+
   setMap(map) {
     this.map = map;
+    this.invalidate();
     this.size = mapSize(map);
     this.ladders = Object.entries(map.ladders).map(([f, t]) => [Number(f), t]);
     this.snakes = Object.entries(map.snakes).map(([f, t]) => [Number(f), t]);
@@ -51,6 +63,7 @@ export class Board {
   /** Sotib olingan ko'rinishlarni qo'llaydi (fishka, narvon, ilon, taxta). */
   setSkins(equipped) {
     this.skins = resolveStyles(equipped || {});
+    this.invalidate();
     this.draw();
   }
 
@@ -63,6 +76,7 @@ export class Board {
   resize() {
     const wrap = this.canvas.parentElement;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    this.dpr = dpr;
     const style = getComputedStyle(wrap);
     const availW = wrap.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
     // Bo'yi bo'yicha ekranning qolgan qismidan foydalanamiz (kichik ekranda ham to'liq ko'rinsin)
@@ -91,6 +105,7 @@ export class Board {
     this.canvas.width = Math.round(w * dpr);
     this.canvas.height = Math.round(h * dpr);
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    this.invalidate(); // o'lcham o'zgardi — statik qatlam qaytadan chizilsin
 
     // Donalarni yangi o'lchamga moslash
     for (const [id, tok] of this.tokens) {
@@ -136,38 +151,64 @@ export class Board {
 
   // ---------- chizish ----------
 
+  /** Har kadrda chaqiriladi: tayyor fon + belgilangan katak + donalar. */
   draw() {
-    const ctx = this.ctx;
-    const th = this.theme();
     const W = this.cell * this.map.cols + this.pad * 2;
     const H = this.cell * this.map.rows + this.pad * 2;
 
+    if (this.bgDirty || this._bgLabels !== this.showLabels) this.buildBackground(W, H);
+
+    const ctx = this.ctx;
     ctx.clearRect(0, 0, W, H);
-
-    ctx.fillStyle = th.light;
-    roundRect(ctx, 2, 2, W - 4, H - 4, 14);
-    ctx.fill();
-
-    this.drawCells(th);
-
-    // Narvon va ilonlar biroz shaffof — ostidagi kataklar bilinib turadi
-    ctx.save();
-    ctx.globalAlpha = 0.88;
-    for (const [from, to] of this.ladders) this.drawLadder(from, to);
-    for (const [from, to] of this.snakes) this.drawSnake(from, to);
-    ctx.restore();
-
-    // Raqamlar va belgilar eng ustida — hech narsa ularni to'smaydi
-    this.drawLabels(th);
-
-    ctx.strokeStyle = th.accent;
-    ctx.lineWidth = 2;
-    roundRect(ctx, 2, 2, W - 4, H - 4, 14);
-    ctx.stroke();
+    ctx.drawImage(this.bg, 0, 0, W, H);
 
     if (this.highlight) this.drawHighlight(this.highlight);
-
     this.drawTokens();
+  }
+
+  /**
+   * O'zgarmaydigan qatlamni alohida canvasga chizadi.
+   * Faqat xarita, o'lcham yoki ko'rinish almashganda qayta chaqiriladi.
+   */
+  buildBackground(W, H) {
+    const dpr = this.dpr || 1;
+    this.bg.width = Math.max(1, Math.round(W * dpr));
+    this.bg.height = Math.max(1, Math.round(H * dpr));
+    const bctx = this.bg.getContext('2d');
+    bctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    bctx.clearRect(0, 0, W, H);
+
+    // Chizish metodlari this.ctx ga yozadi — vaqtincha fon kontekstiga yo'naltiramiz
+    const real = this.ctx;
+    this.ctx = bctx;
+    try {
+      const th = this.theme();
+      bctx.fillStyle = th.light;
+      roundRect(bctx, 2, 2, W - 4, H - 4, 14);
+      bctx.fill();
+
+      this.drawCells(th);
+
+      // Narvon va ilonlar biroz shaffof — ostidagi kataklar bilinib turadi
+      bctx.save();
+      bctx.globalAlpha = 0.88;
+      for (const [from, to] of this.ladders) this.drawLadder(from, to);
+      for (const [from, to] of this.snakes) this.drawSnake(from, to);
+      bctx.restore();
+
+      // Raqamlar va belgilar eng ustida — hech narsa ularni to'smaydi
+      this.drawLabels(th);
+
+      bctx.strokeStyle = th.accent;
+      bctx.lineWidth = 2;
+      roundRect(bctx, 2, 2, W - 4, H - 4, 14);
+      bctx.stroke();
+    } finally {
+      this.ctx = real;
+    }
+
+    this.bgDirty = false;
+    this._bgLabels = this.showLabels;
   }
 
   /** Katak fonlari va to'r chiziqlari. */

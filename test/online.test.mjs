@@ -495,3 +495,52 @@ test('statik sahifa va API javob beradi', async (t) => {
   const hack = await fetch(`http://127.0.0.1:${PORT}/../package.json`);
   assert.notEqual(hack.status, 200);
 });
+
+test('tarqatilgan xabarda har kimga o\'z o\'rni tegadi, chat esa faqat kerak bo\'lganda', async (t) => {
+  await startServer();
+  t.after(() => server.kill());
+
+  const cl = [client(), client(), client(), client()];
+  await Promise.all(cl.map((c) => c.open()));
+  const [a, b, c, d] = cl;
+
+  a.send({ t: 'create', name: 'Ali', mapId: 'klassik130', capacity: 4 });
+  const joinedA = await a.take('joined');
+  assert.ok(Array.isArray(joinedA.room.chat), 'xonaga kirganda chat tarixi keladi');
+
+  for (const [cl2, name] of [[b, 'Vali'], [c, 'Hasan'], [d, 'Husan']]) {
+    cl2.send({ t: 'join', code: joinedA.code, name });
+    await cl2.take('joined');
+  }
+  // Qo'shilish xabarlari tarqaladi — navbatdagilarni tozalaymiz
+  await a.take('room');
+
+  a.send({ t: 'chat', text: 'salom' });
+  await Promise.all(cl.map((x) => x.take('chat')));
+
+  // Zar tashlanganda hamma to'rttasi o'z seat i bilan xabar oladi
+  a.send({ t: 'roll' });
+  const rolls = await Promise.all(cl.map((x) => x.take('roll')));
+  assert.deepEqual(rolls.map((r) => r.seat), [0, 1, 2, 3], 'har kimga o\'z o\'rni');
+
+  const first = JSON.stringify(rolls[0].room);
+  for (const r of rolls) {
+    assert.equal(JSON.stringify(r.room), first, 'xona tavsifi hammaga bir xil');
+    assert.equal(r.room.chat, undefined, 'zar xabarida chat tarixi yuborilmaydi');
+    assert.ok(r.room.state, 'holat bor');
+    assert.equal(r.room.capacity, 4);
+  }
+
+  // Sinxronlashda chat tarixi qaytadi.
+  // Avval qo'shilish paytida kelib qolgan eski "room" xabarlarini tozalaymiz.
+  for (;;) {
+    try { await d.take('room', 200); } catch { break; }
+  }
+  d.send({ t: 'sync' });
+  const synced = await d.take('room');
+  assert.equal(synced.seat, 3);
+  assert.equal(synced.room.chat.length, 1);
+  assert.equal(synced.room.chat[0].text, 'salom');
+
+  cl.forEach((x) => x.close());
+});

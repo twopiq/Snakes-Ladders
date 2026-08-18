@@ -63,6 +63,10 @@ const server = http.createServer((req, res) => {
   serveStatic(req, res);
 });
 
+// O'yin xabarlari kichik va tez-tez ketadi — Nagle algoritmi ularni
+// birlashtirib kutib turmasin (har yurishda ~40 ms gacha kechikish beradi).
+server.on('connection', (socket) => socket.setNoDelay(true));
+
 const wss = new WebSocketServer({ server, path: '/ws' });
 
 wss.on('connection', (ws) => {
@@ -128,7 +132,7 @@ function handle(ws, msg) {
       });
       const player = room.addPlayer(ident.name, ws, ident.tgId);
       bind(ws, room, player);
-      send(ws, { t: 'joined', code: room.code, seat: player.seat, token: player.token, room: room.snapshot() });
+      send(ws, { t: 'joined', code: room.code, seat: player.seat, token: player.token, room: room.snapshot({ withChat: true }) });
       break;
     }
 
@@ -142,7 +146,7 @@ function handle(ws, msg) {
       const player = room.addPlayer(ident.name, ws, ident.tgId);
       if (!player) return send(ws, { t: 'error', msg: 'Xonaga qo\'shib bo\'lmadi' });
       bind(ws, room, player);
-      send(ws, { t: 'joined', code: room.code, seat: player.seat, token: player.token, room: room.snapshot() });
+      send(ws, { t: 'joined', code: room.code, seat: player.seat, token: player.token, room: room.snapshot({ withChat: true }) });
       broadcastRoom(room);
       notify(room, `${player.name} xonaga qo'shildi`);
       break;
@@ -158,7 +162,7 @@ function handle(ws, msg) {
       player.online = true;
       player.lastSeen = Date.now();
       bind(ws, room, player);
-      send(ws, { t: 'joined', code: room.code, seat: player.seat, token: player.token, room: room.snapshot() });
+      send(ws, { t: 'joined', code: room.code, seat: player.seat, token: player.token, room: room.snapshot({ withChat: true }) });
       broadcastRoom(room);
       notify(room, `${player.name} qaytib ulandi`);
       break;
@@ -180,7 +184,7 @@ function handle(ws, msg) {
       bind(mate.ws, room, p1);
       bind(ws, room, p2);
       // Ikkalasi ham to'liq holatni oladi — o'yin shu zahoti boshlanadi
-      const snap = room.snapshot();
+      const snap = room.snapshot({ withChat: true });
       send(mate.ws, { t: 'joined', code: room.code, seat: p1.seat, token: p1.token, room: snap });
       send(ws, { t: 'joined', code: room.code, seat: p2.seat, token: p2.token, room: snap });
       notify(room, 'Raqib topildi — omad!');
@@ -286,16 +290,25 @@ function broadcast(room, obj) {
   for (const p of room.players) send(p.ws, obj);
 }
 
-/** Xona holatini yuboradi — har bir o'yinchiga o'z o'rni (seat) bilan birga. */
+/**
+ * Xona holatini yuboradi — har bir o'yinchiga o'z o'rni (seat) bilan birga.
+ *
+ * Xabar tanasi hammaga bir xil, faqat "seat" farq qiladi. Shuning uchun uni
+ * bir marta JSON ga o'giramiz va har o'yinchi uchun oxiriga faqat seat ni
+ * qo'shamiz: 4 kishilik xonada bu to'rt marta serializatsiya o'rniga bittasi.
+ */
 function broadcastRoom(room, type = 'room', extra = {}) {
-  const snap = room.snapshot();
-  for (const p of room.players) send(p.ws, { t: type, room: snap, seat: p.seat, ...extra });
+  const body = JSON.stringify({ t: type, room: room.snapshot({ withChat: type !== 'roll' }), ...extra });
+  const head = body.slice(0, -1); // yopuvchi "}" olib tashlanadi
+  for (const p of room.players) {
+    if (p.ws && p.ws.readyState === 1) p.ws.send(`${head},"seat":${p.seat}}`);
+  }
 }
 
 /** Bitta mijozga joriy holatni yuboradi (sinxronlash uchun). */
 function sendRoom(ws, room) {
   const player = room.byToken(ws.ctx.token);
-  send(ws, { t: 'room', room: room.snapshot(), seat: player ? player.seat : undefined });
+  send(ws, { t: 'room', room: room.snapshot({ withChat: true }), seat: player ? player.seat : undefined });
 }
 
 function notify(room, text) {

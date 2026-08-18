@@ -199,14 +199,20 @@ export class Room {
     return this.players.filter((p) => !p.online && now - p.lastSeen > RECONNECT_MS);
   }
 
-  /** Mijozga yuboriladigan xona tavsifi (maxfiy tokenlarsiz). */
-  snapshot() {
+  /**
+   * Mijozga yuboriladigan xona tavsifi (maxfiy tokenlarsiz).
+   *
+   * Chat tarixi faqat kerak bo'lganda qo'shiladi: har zar tashlashda uni ham
+   * yuborish xabarni bekorga kattalashtiradi (mijoz uni faqat o'yinga kirganda
+   * o'qiydi, keyingi xabarlar alohida "chat" hodisasi bilan keladi).
+   */
+  snapshot({ withChat = false } = {}) {
     return {
       code: this.code,
       mapId: this.mapId,
       rules: this.rules,
       state: this.state ? sanitizeState(this.state) : null,
-      chat: this.chat.slice(-30),
+      ...(withChat ? { chat: this.chat.slice(-30) } : {}),
       capacity: this.capacity,
       canStartEarly: this.canStartEarly,
       players: this.players.map((p) => ({

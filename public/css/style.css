@@ -975,3 +975,10 @@ a:hover { color: #7dd3fc; }
   font-size: 11px;
   word-break: break-all;
 }
+
+/* chiqishni tasdiqlash: xavfli amal tugmasi */
+button.primary.danger {
+  background: linear-gradient(180deg, #f87171, #dc2626);
+  color: #fff;
+}
+button.primary.danger:hover { filter: brightness(1.06); }

@@ -10,7 +10,7 @@ import { renderMenuPromo, openTelegramApp, canPromote, telegramAppLink } from '.
 import { sound } from './sound.js';
 import {
   isTelegram, initTelegram, loadConfig, tgUserName, initData, startParam,
-  shareRoom, showBackButton, setMainButton, setClosingConfirmation, appVersion,
+  shareRoom, showBackButton, setMainButton, setClosingConfirmation, appVersion, haptic,
 } from './telegram.js';
 import { $, $$, showScreen, toast, showModal, hideModal } from './ui.js';
 
@@ -58,10 +58,58 @@ function goto(screenId) {
   if (screenId !== 'screen-game') setMainButton({ show: false });
 }
 
-/** Telegram'dagi "orqaga" tugmasi bosilganda. */
+/**
+ * Telegram'dagi "orqaga" tugmasi bosilganda.
+ *
+ * O'yin davom etayotgan bo'lsa darhol chiqarib yubormaymiz — tasdiq so'raymiz.
+ * Telegram'da bu tugma ekranning burchagida turadi va tasodifan bosilib,
+ * o'yindan chiqib ketish oson edi.
+ */
 function handleBack() {
-  if (S.mode) leaveGame();
-  else goto('screen-menu');
+  if (leaveAskOpen()) return hideModal(); // tasdiq oynasi ochiq edi — uni yopamiz
+  if (inLiveGame()) return askLeave();
+  if (S.mode) return leaveGame();
+  goto('screen-menu');
+}
+
+/** Hozir tugallanmagan o'yin ichidamizmi? */
+function inLiveGame() {
+  if (!S.mode || !$('#screen-game').classList.contains('active')) return false;
+  const state = S.mode === 'offline' ? S.state : S.online.room?.state;
+  return state?.status === 'playing';
+}
+
+/**
+ * Chiqishni tasdiqlash oynasi hozir ochiqmi?
+ * Holatni alohida o'zgaruvchida saqlamaymiz — DOM dan o'qiymiz, shunda oyna
+ * qanday yopilsa ham (fonga bosish, boshqa oyna ustiga chiqishi) belgi qolib ketmaydi.
+ */
+function leaveAskOpen() {
+  return !$('#overlay').classList.contains('hidden') && Boolean($('#modal [data-act="leave"]'));
+}
+
+/** O'yindan chiqishdan oldin tasdiq so'raydi. */
+function askLeave() {
+  haptic('warning');
+  const online = S.mode === 'online';
+  showModal(`
+    <h2>O'yindan chiqasizmi?</h2>
+    <p>${online
+      ? "O'yin davom etmoqda. Chiqsangiz o'rningiz bo'shaydi va qaytib kira olmaysiz — qolganlar davom etadi."
+      : "O'yin davom etmoqda. Chiqsangiz joriy o'yin yo'qoladi."}</p>
+    <div class="modal-actions">
+      <button class="ghost" data-act="stay">Yo'q, davom etaman</button>
+      <button class="primary danger" data-act="leave">Ha, chiqaman</button>
+    </div>`, (act) => {
+    hideModal();
+    if (act === 'leave') leaveGame();
+  });
+}
+
+/** Chiqish tugmalari uchun: kerak bo'lsa tasdiq so'raydi. */
+function requestLeave() {
+  if (inLiveGame()) return askLeave();
+  leaveGame();
 }
 
 // ---------------------------------------------------------------- ko'rinish
@@ -72,7 +120,7 @@ const view = new GameView({
     if (S.mode === 'online' && S.online.inGame) net.sync();
   },
   onRematch: () => (S.mode === 'offline' ? offlineRematch() : onlineRematch()),
-  onLeave: () => leaveGame(),
+  onLeave: () => requestLeave(),
   onTelegram: () => openTelegramApp(),
   onChat: (text) => {
     if (S.mode === 'online') net.chat(text);

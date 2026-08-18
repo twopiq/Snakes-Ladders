@@ -28,9 +28,20 @@ export class GameView {
     this.mySeat = null;
     this.board = null;
     this.animating = false;
-    this.chain = Promise.resolve();
     this.gen = 0; // har bir yangi o'yin/ochilishda oshadi — eski animatsiyalar bekor bo'ladi
     this.resultsShown = false;
+
+    // Animatsiya navbati.
+    //   serverState  — serverdan kelgan eng oxirgi holat (tugma shunga qarab yonadi);
+    //   pending      — hali ko'rsatilmagan holat; yangisi eskisining o'rniga tushadi;
+    //   skip         — ketayotgan animatsiyani tez yakunlash belgisi.
+    // Shu tufayli navbat ortda qolib ketmaydi: 4 kishilik o'yinda ham ekran
+    // serverdan ko'pi bilan bitta yurishga orqada bo'ladi.
+    this.serverState = null;
+    this.pending = null;
+    this.skip = false;
+    this.running = false;
+    this.loop = Promise.resolve();
 
     this.el = {
       canvas: $('#board'),
@@ -109,11 +120,13 @@ export class GameView {
     // Oldingi o'yindan qolgan animatsiya yangi o'yin ustiga chizmasligi uchun
     this.gen++;
     this.animating = false;
-    this.chain = Promise.resolve();
+    this.pending = null;
+    this.skip = false;
     this.resultsShown = false;
 
     this.mode = mode;
     this.state = state;
+    this.serverState = state;
     this.mySeat = mySeat;
     const map = getMap(state.mapId);
 
@@ -149,10 +162,19 @@ export class GameView {
     this.el.chatPane.classList.toggle('hidden', name !== 'chat');
   }
 
+  /**
+   * Zar tashlash mumkinmi?
+   *
+   * Onlaynda navbat serverdan kelgan eng oxirgi holat bo'yicha aniqlanadi —
+   * animatsiya biroz orqada qolsa ham tugma darhol yonadi. Oflaynda esa bitta
+   * qurilma bo'lgani uchun animatsiya tugamaguncha kutamiz (tasodifan ikki
+   * marta bosilib, navbat sakrab ketmasin).
+   */
   canRoll() {
-    if (!this.state || this.state.status !== 'playing' || this.animating) return false;
-    if (this.mode === 'online') return this.state.turn === this.mySeat;
-    return true;
+    const st = this.mode === 'online' ? (this.serverState || this.state) : this.state;
+    if (!st || st.status !== 'playing') return false;
+    if (this.mode === 'online') return st.turn === this.mySeat;
+    return !this.animating;
   }
 
   /**
@@ -160,19 +182,56 @@ export class GameView {
    * Chaqiruvlar navbat bilan bajariladi (animatsiyalar ustma-ust tushmaydi).
    */
   update(state, events = []) {
-    this.chain = this.chain.then(() => this._update(state, events)).catch((err) => {
-      console.error(err);
-      this.animating = false;
-      this.state = state;
-      this.board?.setPlayers(state.players);
-      this.render();
-    });
-    return this.chain;
+    this.serverState = state;
+    // Eski, hali ko'rsatilmagan holat yangisi bilan almashtiriladi — navbat o'smaydi
+    this.pending = { state, events };
+    this.skip = true;      // ketayotgan animatsiya tez yakunlansin
+    this.syncControls();   // tugma serverdagi navbatga qarab darhol yangilanadi
+    if (!this.running) this.loop = this.runQueue();
+    return this.loop;
+  }
+
+  /** Navbatdagi holatlarni ketma-ket ko'rsatadi (har doim eng oxirgisini). */
+  async runQueue() {
+    this.running = true;
+    try {
+      while (this.pending) {
+        const { state, events } = this.pending;
+        this.pending = null;
+        this.skip = false;
+        try {
+          await this._update(state, events);
+        } catch (err) {
+          console.error(err);
+          this.applyInstant(state);
+        }
+      }
+    } finally {
+      this.running = false;
+    }
+  }
+
+  /** Tugma matni va faolligini holatga qarab yangilaydi (to'liq render qilmasdan). */
+  syncControls() {
+    const st = this.serverState || this.state;
+    if (!st) return;
+    const can = this.canRoll();
+    this.el.rollBtn.disabled = !can;
+    this.el.rollBtn.textContent = this.rollLabel(st, can);
+    this.on.onControls?.({ canRoll: can, label: this.el.rollBtn.textContent, finished: st.status === 'finished' });
+  }
+
+  /** Zar tugmasidagi matn. */
+  rollLabel(state, can) {
+    if (state.status === 'finished') return "O'yin tugadi";
+    if (can) return 'Zar tashlash';
+    if (this.mode === 'online') return 'Raqib navbati';
+    return this.animating ? 'Yurish...' : 'Zar tashlash';
   }
 
   async _update(state, events) {
     // Sahifa fonda bo'lsa animatsiya ishlamaydi — holatni darhol qo'llaymiz
-    if (!events.length || document.hidden) {
+    if (!events.length || document.hidden || this.skip) {
       this.applyInstant(state);
       return;
     }
@@ -188,7 +247,7 @@ export class GameView {
 
     // Qo'riqchi: animatsiya har qanday sababga ko'ra tugamasa ham,
     // holat baribir qo'llanadi va navbat bloklanib qolmaydi.
-    const budget = 2000 + events.length * 900;
+    const budget = 1200 + events.length * 600;
     let guard;
     const guardPromise = new Promise((resolve) => {
       guard = setTimeout(resolve, budget);
@@ -198,6 +257,7 @@ export class GameView {
       (async () => {
         for (const ev of events) {
           if (this.gen !== gen) return; // yangi o'yin boshlandi — eskisini tashlaymiz
+          if (this.skip) return;        // yangi yurish keldi — bunisini tugatamiz
           await this.playEvent(ev, state);
         }
       })(),
@@ -228,8 +288,10 @@ export class GameView {
   /** Qotib qolgan animatsiyani majburan yakunlaydi. */
   forceFinish() {
     this.gen++;
-    this.chain = Promise.resolve();
-    if (this.state) this.applyInstant(this.state);
+    this.skip = true;
+    this.pending = null;
+    const latest = this.serverState || this.state;
+    if (latest) this.applyInstant(latest);
   }
 
   async playEvent(ev, state) {
@@ -245,8 +307,9 @@ export class GameView {
         const path = ev.bounced
           ? [...stepPath(from, state.size), ...stepPath(state.size, ev.to)]
           : stepPath(from, ev.to);
-        const speed = path.length > 8 ? 105 : 165;
+        const speed = path.length > 6 ? 70 : 110;
         for (const cell of path) {
+          if (this.skip) break; // navbatda yangi yurish kutyapti — qolganini sakraymiz
           sound.step();
           haptic('light');
           await this.board.glide(ev.playerId, cell, speed, 'step');
@@ -257,16 +320,16 @@ export class GameView {
       case 'ladder':
         sound.ladder();
         haptic('success');
-        await this.board.flash(ev.from, 220);
-        await this.board.glide(ev.playerId, ev.to, 620);
+        await this.board.flash(ev.from, 160);
+        await this.board.glide(ev.playerId, ev.to, 460);
         toast(`${player?.name || ''} narvondan ${ev.from} → ${ev.to} ko'tarildi 🪜`);
         break;
 
       case 'snake':
         sound.snake();
         haptic('error');
-        await this.board.flash(ev.from, 220);
-        await this.board.glide(ev.playerId, ev.to, 700);
+        await this.board.flash(ev.from, 160);
+        await this.board.glide(ev.playerId, ev.to, 500);
         toast(`${player?.name || ''} ilonga tushdi: ${ev.from} → ${ev.to} 🐍`, 'bad');
         break;
 
@@ -274,26 +337,26 @@ export class GameView {
         sound.bonus();
         haptic('success');
         toast(`${player?.name || ''} bonus katak — qo'shimcha zar! ★`);
-        await wait(220);
+        await wait(140);
         break;
 
       case 'trap':
         sound.trap();
         haptic('warning');
         toast(`${player?.name || ''} tuzoqqa tushdi — bir yurish yo'q ✖`, 'bad');
-        await wait(220);
+        await wait(140);
         break;
 
       case 'penalty':
         toast(`${player?.name || ''}: ketma-ket 3 ta 6 — yurish bekor`, 'bad');
-        await wait(220);
+        await wait(140);
         break;
 
       case 'finish':
         sound.win();
         haptic('success');
         toast(`🏁 ${player?.name || ''} — ${ev.rank}-o'rin!`);
-        await wait(400);
+        await wait(300);
         break;
 
       default:
@@ -309,13 +372,14 @@ export class GameView {
       let n = 0;
       const timer = setInterval(() => {
         this.setDice(1 + Math.floor(Math.random() * 6));
-        if (++n >= 6) {
+        // Yangi yurish kutayotgan bo'lsa zarni cho'zmaymiz
+        if (++n >= 5 || this.skip) {
           clearInterval(timer);
           this.el.dice.classList.remove('rolling');
           this.setDice(value);
-          setTimeout(resolve, 160);
+          setTimeout(resolve, 110);
         }
-      }, 70);
+      }, 55);
     });
   }
 
@@ -329,14 +393,17 @@ export class GameView {
   render() {
     const state = this.state;
     if (!state) return;
-    const cur = state.players[state.turn];
+    // Navbat va tugma serverdagi eng oxirgi holatga qaraydi, taxta esa
+    // animatsiya tugagunicha o'z holicha qoladi.
+    const turnState = this.mode === 'online' ? (this.serverState || state) : state;
+    const cur = turnState.players[turnState.turn];
 
     // navbat
-    if (state.status === 'finished') {
+    if (turnState.status === 'finished') {
       this.el.turnName.textContent = "O'yin tugadi";
       this.el.turnBox.style.borderLeftColor = 'var(--gold)';
     } else {
-      const mine = this.mode === 'online' && state.turn === this.mySeat;
+      const mine = this.mode === 'online' && turnState.turn === this.mySeat;
       this.el.turnName.textContent = mine ? `${cur.name} (siz)` : cur.name;
       this.el.turnBox.style.borderLeftColor = cur.hex;
     }
@@ -344,18 +411,15 @@ export class GameView {
     // zar tugmasi
     const can = this.canRoll();
     this.el.rollBtn.disabled = !can;
-    if (state.status === 'finished') {
-      this.el.rollBtn.textContent = "O'yin tugadi";
+    this.el.rollBtn.textContent = this.rollLabel(turnState, can);
+    if (turnState.status === 'finished') {
       this.el.rollHint.textContent = "Natijalar uchun \"Qayta o'ynash\"ni bosing";
-    } else if (this.animating) {
-      this.el.rollBtn.textContent = 'Yurish...';
-      this.el.rollHint.textContent = '';
-    } else if (this.mode === 'online' && state.turn !== this.mySeat) {
-      this.el.rollBtn.textContent = 'Raqib navbati';
+    } else if (can) {
+      this.el.rollHint.textContent = this.mode === 'offline' ? `Navbat: ${cur.name}` : 'Sizning navbatingiz!';
+    } else if (this.mode === 'online') {
       this.el.rollHint.textContent = 'Kuting...';
     } else {
-      this.el.rollBtn.textContent = 'Zar tashlash';
-      this.el.rollHint.textContent = this.mode === 'offline' ? `Navbat: ${cur.name}` : 'Sizning navbatingiz!';
+      this.el.rollHint.textContent = '';
     }
 
     // tashqi boshqaruv (Telegram pastki tugmasi) uchun holat

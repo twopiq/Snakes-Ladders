@@ -156,6 +156,21 @@ o'ylaydi, lekin serverdan xabar kelmaydi. Shunga qarshi:
   hech qachon "qotib" qolmaydi;
 - server navbat xatosiga javoban joriy holatni ham yuboradi.
 
+## Tezlik
+
+Ko'p kishilik xonada ekran serverdan orqada qolmasligi uchun:
+
+- **taxta ikki qatlamga bo'lingan** — kataklar, narvon/ilonlar va raqamlar bir marta
+  alohida canvasga chiziladi, har kadrda esa faqat tayyor rasm va donalar chiziladi
+  (130 katakli xaritada bitta kadr ~5 ms dan ~0,25 ms ga tushdi);
+- **animatsiya navbati bittaga cheklangan** — yangi yurish kelsa, ko'rsatilmagan eski
+  holat tashlab yuboriladi va ekran serverdan ko'pi bilan bitta yurishga orqada qoladi;
+- **zar tugmasi serverdagi navbatga qaraydi** — animatsiya tugashini kutmaydi, ya'ni
+  navbat sizga o'tishi bilan tugma yonadi;
+- server har yurishda xabarni **bir marta** JSON ga o'giradi (har o'yinchi uchun
+  faqat o'z `seat`i qo'shiladi) va zar xabariga chat tarixini qo'shmaydi;
+- WebSocket ulanishida Nagle algoritmi o'chirilgan — kichik xabarlar kutib turmaydi.
+
 ## Admin paneli
 
 `/admin` manzilida (kirish uchun `ADMIN_PASSWORD` kerak):
@@ -169,5 +184,7 @@ o'ylaydi, lekin serverdan xabar kelmaydi. Shunga qarshi:
 ## Boshqaruv
 
 - **Zar tashlash** tugmasi yoki **Bo'sh joy / Enter** tugmalari.
+- O'yin davom etayotganda chiqishdan oldin tasdiq so'raladi (Telegram'ning
+  "orqaga" tugmasi ham shu yo'ldan o'tadi — tasodifan bosilib chiqib ketilmaydi).
 - Xona kodini nusxalash uchun yuqoridagi kod belgisiga bosing.
 - Ovozni yuqoridagi 🔊 tugmasi bilan o'chirish mumkin.

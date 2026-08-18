@@ -78,7 +78,7 @@ Buni Render'da alohida **Background Worker** sifatida ishga tushirsangiz bo'ladi
 |---|---|
 | Ism | Telegram profilidan olinadi, o'zgartirib bo'lmaydi (server imzoni tekshiradi) |
 | Zar tugmasi | Telegram'ning pastki asosiy tugmasiga chiqadi — har doim ko'rinib turadi |
-| Orqaga | Telegram'ning o'z "orqaga" tugmasi ishlaydi |
+| Orqaga | Telegram'ning o'z "orqaga" tugmasi ishlaydi. O'yin davom etayotgan bo'lsa avval tasdiq so'raydi — tasodifan bosilib o'yindan chiqib ketilmaydi |
 | Tebranish | Zar, narvon, ilon, g'alaba — har biriga alohida haptik javob |
 | Taklif | "Do'stni chaqirish" tugmasi Telegram ulashish oynasini ochadi |
 | Havola bilan kirish | `?startapp=KOD` bo'lsa, o'yinchi to'g'ridan-to'g'ri xonaga tushadi |
