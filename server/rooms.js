@@ -4,10 +4,12 @@
  */
 
 import crypto from 'node:crypto';
-import { createGame, applyRoll, rollDice, normalizeRules, PLAYER_COLORS } from '../public/shared/engine.js';
+import { createGame, applyRoll, rollDice, normalizeRules, abandonPlayer, PLAYER_COLORS } from '../public/shared/engine.js';
 import { getMap } from '../public/shared/maps.js';
 
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // chalkash belgilarsiz
+export const MIN_SEATS = 2;
+export const MAX_SEATS = 3; // onlayn xonada eng ko'pi 3 kishi
 const ROOM_TTL_MS = 30 * 60 * 1000; // hamma uzilgach xona shuncha vaqt saqlanadi
 const RECONNECT_MS = 60 * 1000;
 
@@ -27,8 +29,8 @@ export class RoomStore {
     return code;
   }
 
-  create({ name, mapId, rules }) {
-    const room = new Room(this.newCode(), { mapId, rules });
+  create({ name, mapId, rules, capacity }) {
+    const room = new Room(this.newCode(), { mapId, rules, capacity });
     this.rooms.set(room.code, room);
     return room;
   }
@@ -50,10 +52,12 @@ export class RoomStore {
 }
 
 export class Room {
-  constructor(code, { mapId, rules }) {
+  constructor(code, { mapId, rules, capacity }) {
     this.code = code;
     this.mapId = getMap(mapId).id;
     this.rules = normalizeRules(rules);
+    // Nechta o'yinchiga mo'ljallangan (2 yoki 3)
+    this.capacity = Math.min(MAX_SEATS, Math.max(MIN_SEATS, Number(capacity) || MIN_SEATS));
     /** @type {Array<{token:string,name:string,seat:number,ws:any,online:boolean,lastSeen:number}>} */
     this.players = [];
     this.state = null;
@@ -64,11 +68,21 @@ export class Room {
   }
 
   get full() {
-    return this.players.length >= 2;
+    return this.players.length >= this.capacity;
+  }
+
+  /** Kamida ikki kishi bo'lsa, xona egasi o'yinni erta boshlashi mumkin. */
+  get canStartEarly() {
+    return !this.state && this.players.length >= MIN_SEATS && !this.full;
+  }
+
+  /** Xona egasi — birinchi o'ringa kirgan o'yinchi. */
+  isHost(token) {
+    return this.players[0]?.token === token;
   }
 
   addPlayer(name, ws, tgId = null) {
-    if (this.full) return null;
+    if (this.full || this.state) return null; // o'yin boshlangach yangi odam qo'shilmaydi
     const seat = this.players.length;
     const player = {
       token: crypto.randomBytes(16).toString('hex'),
@@ -104,6 +118,15 @@ export class Room {
     this.lastActivity = Date.now();
   }
 
+  /** Xona egasi to'lmagan xonada o'yinni boshlaydi. */
+  startEarly(token) {
+    if (!this.isHost(token)) return { ok: false, error: 'Faqat xona egasi boshlay oladi' };
+    if (this.state) return { ok: false, error: "O'yin allaqachon boshlangan" };
+    if (this.players.length < MIN_SEATS) return { ok: false, error: 'Kamida 2 kishi kerak' };
+    this.startGame();
+    return { ok: true };
+  }
+
   /** Navbat shu tokendagi o'yinchidami? */
   isTurnOf(token) {
     if (!this.state || this.state.status !== 'playing') return false;
@@ -124,9 +147,10 @@ export class Room {
   voteRematch(token) {
     if (!this.byToken(token)) return false;
     this.rematchVotes.add(token);
-    if (this.rematchVotes.size >= this.players.length && this.players.length === 2) {
-      // yangi o'yinda o'rinlar almashadi — navbat adolatli bo'lsin
-      this.players.reverse();
+    if (this.rematchVotes.size >= this.players.length && this.players.length >= MIN_SEATS) {
+      // Navbat adolatli bo'lishi uchun o'rinlar bittaga suriladi:
+      // birinchi bo'lib boshlagan endi oxirgi bo'ladi.
+      this.players.push(this.players.shift());
       this.players.forEach((p, i) => { p.seat = i; });
       this.startGame();
       return true;
@@ -134,11 +158,29 @@ export class Room {
     return false;
   }
 
+  /**
+   * O'yinchi xonadan chiqadi.
+   * O'yin boshlanmagan bo'lsa — ro'yxatdan olib tashlanadi.
+   * O'yin ketayotgan bo'lsa — o'rinlar buzilmasligi uchun faqat "tashlab ketdi"
+   * deb belgilanadi va navbat undan o'tib ketadi.
+   */
   removePlayer(token) {
     const idx = this.players.findIndex((p) => p.token === token);
-    if (idx >= 0) this.players.splice(idx, 1);
-    this.players.forEach((p, i) => { p.seat = i; });
+    if (idx < 0) return { events: [] };
     this.lastActivity = Date.now();
+
+    if (!this.state || this.state.status !== 'playing') {
+      this.players.splice(idx, 1);
+      this.players.forEach((p, i) => { p.seat = i; });
+      this.rematchVotes.delete(token);
+      return { events: [] };
+    }
+
+    const seatId = `seat${this.players[idx].seat}`;
+    const { state, events } = abandonPlayer(this.state, seatId);
+    this.state = state;
+    this.players[idx].left = true;
+    return { events };
   }
 
   markOffline(token) {
@@ -165,10 +207,13 @@ export class Room {
       rules: this.rules,
       state: this.state ? sanitizeState(this.state) : null,
       chat: this.chat.slice(-30),
+      capacity: this.capacity,
+      canStartEarly: this.canStartEarly,
       players: this.players.map((p) => ({
         seat: p.seat,
         name: p.name,
         online: p.online,
+        left: Boolean(p.left),
         color: PLAYER_COLORS[p.seat]?.id,
         rematch: this.rematchVotes.has(p.token),
       })),

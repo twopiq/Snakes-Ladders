@@ -120,7 +120,9 @@ function handle(ws, msg) {
     case 'create': {
       const ident = identify(ws, msg);
       if (!ident) return;
-      const room = store.create({ name: ident.name, mapId: msg.mapId, rules: msg.rules });
+      const room = store.create({
+        name: ident.name, mapId: msg.mapId, rules: msg.rules, capacity: msg.capacity,
+      });
       const player = room.addPlayer(ident.name, ws, ident.tgId);
       bind(ws, room, player);
       send(ws, { t: 'joined', code: room.code, seat: player.seat, token: player.token, room: room.snapshot() });
@@ -132,8 +134,10 @@ function handle(ws, msg) {
       if (!ident) return;
       const room = store.get(msg.code);
       if (!room) return send(ws, { t: 'error', msg: 'Bunday kodli xona topilmadi' });
-      if (room.full) return send(ws, { t: 'error', msg: "Xona to'lgan (2/2)" });
+      if (room.state) return send(ws, { t: 'error', msg: "Bu xonada o'yin allaqachon boshlangan" });
+      if (room.full) return send(ws, { t: 'error', msg: `Xona to'lgan (${room.capacity}/${room.capacity})` });
       const player = room.addPlayer(ident.name, ws, ident.tgId);
+      if (!player) return send(ws, { t: 'error', msg: 'Xonaga qo\'shib bo\'lmadi' });
       bind(ws, room, player);
       send(ws, { t: 'joined', code: room.code, seat: player.seat, token: player.token, room: room.snapshot() });
       broadcastRoom(room);
@@ -180,10 +184,21 @@ function handle(ws, msg) {
       break;
     }
 
+    case 'start': {
+      // Xona egasi to'lmagan xonada o'yinni boshlaydi (masalan 3 kishilik xonada 2 kishi)
+      const room = requireRoom(ws);
+      if (!room) return;
+      const result = room.startEarly(ws.ctx.token);
+      if (!result.ok) return send(ws, { t: 'error', msg: result.error });
+      broadcastRoom(room, 'restart');
+      notify(room, "O'yin boshlandi!");
+      break;
+    }
+
     case 'roll': {
       const room = requireRoom(ws);
       if (!room) return;
-      if (!room.full || !room.state) return send(ws, { t: 'error', msg: 'Raqib hali qo\'shilmagan' });
+      if (!room.state) return send(ws, { t: 'error', msg: 'Raqiblar hali qo\'shilmagan' });
       const result = room.roll(ws.ctx.token);
       if (result.error) {
         send(ws, { t: 'error', msg: result.error });
@@ -228,10 +243,12 @@ function handle(ws, msg) {
       const room = requireRoom(ws);
       if (!room) return;
       const player = room.byToken(ws.ctx.token);
-      room.removePlayer(ws.ctx.token);
+      const { events } = room.removePlayer(ws.ctx.token);
       ws.ctx = { code: null, token: null };
       send(ws, { t: 'left' });
-      broadcastRoom(room);
+      // O'yin ketayotgan bo'lsa qolganlarga hodisalar bilan yuboramiz (navbat o'tadi)
+      if (events.length) broadcastRoom(room, 'roll', { dice: null, events });
+      else broadcastRoom(room);
       if (player) notify(room, `${player.name} o'yindan chiqdi`);
       break;
     }

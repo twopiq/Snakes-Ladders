@@ -3,7 +3,7 @@
 Qo'lda chizilgan "Ilonlar va Narvonlar" stol o'yinining elektron ko'rinishi.
 
 - **Telegram Mini App** — o'yin Telegram ichida ochiladi, ism profildan olinadi, taklif havolasi bilan do'stni chaqirasiz ([sozlash](docs/telegram-mini-app.md)).
-- **Onlayn** — 2 kishi, real vaqtda (WebSocket). Xona kodi orqali yoki tezkor juftlash bilan.
+- **Onlayn** — **2 yoki 3 kishi**, real vaqtda (WebSocket). Xona kodi orqali yoki tezkor juftlash bilan.
 - **Oflayn** — bitta qurilmada 2 dan 6 kishigacha, navbat bilan.
 - **5 ta katta xarita** — 120 dan 196 katakkacha.
 - **Do'kon** — fishka, narvon, ilon va taxta ko'rinishlari; Telegram Stars (⭐) orqali ([sozlash](docs/monetizatsiya.md)).
@@ -61,9 +61,14 @@ ilon/narvon joylashuvini generatsiya qilib beradi. `npm test` xaritani tekshirad
 
 ## Onlayn rejim qanday ishlaydi
 
-1. Bir o'yinchi **"Xona ochish"** tugmasini bosadi va 4 belgili kodni oladi.
-2. Ikkinchi o'yinchi shu kodni kiritib qo'shiladi — o'yin darhol boshlanadi.
-3. **Tezkor o'yin** tugmasi navbatdagi birinchi raqib bilan avtomatik juftlaydi.
+1. Xona ochuvchi **nechta o'yinchi** (2 yoki 3) ekanini tanlaydi va 4 belgili kodni oladi.
+2. Qolganlar shu kodni kiritib qo'shiladi — xona to'lganda o'yin avtomatik boshlanadi.
+3. 3 kishilik xonada hamma yig'ilmasa, **xona egasi "Hozir boshlash"** tugmasi bilan
+   ikki kishi bo'lib boshlashi mumkin.
+4. **Tezkor o'yin** tugmasi navbatdagi birinchi raqib bilan avtomatik juftlaydi (2 kishi).
+
+O'yin o'rtasida kimdir chiqib ketsa, uning navbati o'tkazib yuboriladi va qolganlar
+davom etaveradi; bitta o'yinchi qolsa — u g'olib bo'ladi.
 
 Zar **serverda** tashlanadi va ikkala mijozga bir xil holat yuboriladi — ya'ni natijani
 o'zgartirib bo'lmaydi. Navbat qoidasi ham serverda tekshiriladi. Aloqa uzilsa, o'yinchi
@@ -102,7 +107,7 @@ To'liq yo'riqnoma: [docs/monetizatsiya.md](docs/monetizatsiya.md)
 ```
 server/
   index.js       HTTP + WebSocket server, xabarlar protokoli
-  rooms.js       Onlayn xonalar, o'rinlar, qayta ulanish, tezkor juftlash
+  rooms.js       Onlayn xonalar (2-3 kishi), o'rinlar, qayta ulanish, tezkor juftlash
   telegram.js    Mini App initData imzosini tekshirish, sozlama
   bot.js         Telegram bot va Stars to'lovlari (server ichida)
   store.js       O'yinchilar, xaridlar va narxlar (JSON saqlagich)

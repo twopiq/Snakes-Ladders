@@ -127,11 +127,136 @@ test('onlayn rejim: xona, navbat, sinxron holat', async (t) => {
   await c.open();
   c.send({ t: 'join', code: joinedA.code, name: 'Uchinchi' });
   const full = await c.take('error');
-  assert.match(full.msg, /to'lgan/);
+  assert.match(full.msg, /to'lgan|boshlangan/, 'uchinchi o\'yinchi 2 kishilik xonaga kira olmaydi');
   c.close();
 
   a.close();
   b2.close();
+});
+
+test('3 kishilik xona: uchinchi o\'yinchi qo\'shilgach o\'yin boshlanadi', async (t) => {
+  await startServer();
+  t.after(() => server.kill());
+
+  const a = client();
+  const b = client();
+  const c = client();
+  await Promise.all([a.open(), b.open(), c.open()]);
+
+  // Navbat qat'iy aylanishi uchun qo'shimcha yurish beruvchi qoidalarni o'chiramiz
+  a.send({
+    t: 'create', name: 'Ali', mapId: 'tezkor120', capacity: 3,
+    rules: { sixExtraTurn: false, specialCells: false },
+  });
+  const joinedA = await a.take('joined');
+  assert.equal(joinedA.room.capacity, 3);
+  assert.equal(joinedA.room.state, null);
+
+  b.send({ t: 'join', code: joinedA.code, name: 'Vali' });
+  const joinedB = await b.take('joined');
+  assert.equal(joinedB.room.state, null, 'ikki kishi bilan hali boshlanmaydi');
+  assert.equal(joinedB.room.canStartEarly, true, 'xona egasi erta boshlashi mumkin');
+
+  c.send({ t: 'join', code: joinedA.code, name: 'Hasan' });
+  const joinedC = await c.take('joined');
+  assert.equal(joinedC.seat, 2);
+  assert.ok(joinedC.room.state, 'uchinchi kishi qo\'shilgach o\'yin boshlanadi');
+  assert.equal(joinedC.room.state.players.length, 3);
+  assert.deepEqual(joinedC.room.state.players.map((p) => p.name), ['Ali', 'Vali', 'Hasan']);
+
+  // To'rtinchi kira olmaydi
+  const d = client();
+  await d.open();
+  d.send({ t: 'join', code: joinedA.code, name: 'Husan' });
+  const err = await d.take('error');
+  assert.match(err.msg, /to'lgan|boshlangan/);
+  d.close();
+
+  // Navbat aylanadi: 0 -> 1 -> 2
+  const seats = [];
+  for (const cl of [a, b, c]) {
+    cl.send({ t: 'roll' });
+    const roll = await cl.take('roll');
+    seats.push(roll.room.state.lastRoll.playerId);
+    // qolgan ikkitasiga ham yetib boradi
+    await Promise.all([a, b, c].filter((x) => x !== cl).map((x) => x.take('roll')));
+  }
+  assert.deepEqual(seats, ['seat0', 'seat1', 'seat2'], 'navbat uch o\'yinchi bo\'ylab aylanadi');
+
+  a.close();
+  b.close();
+  c.close();
+});
+
+test('3 kishilik xona: egasi ikki kishi bilan erta boshlaydi', async (t) => {
+  await startServer();
+  t.after(() => server.kill());
+
+  const a = client();
+  const b = client();
+  await Promise.all([a.open(), b.open()]);
+
+  a.send({ t: 'create', name: 'Ali', mapId: 'klassik130', capacity: 3 });
+  const joinedA = await a.take('joined');
+  b.send({ t: 'join', code: joinedA.code, name: 'Vali' });
+  await b.take('joined');
+  await a.take('room');
+
+  // Mehmon boshlay olmaydi
+  b.send({ t: 'start' });
+  const denied = await b.take('error');
+  assert.match(denied.msg, /xona egasi/i);
+
+  a.send({ t: 'start' });
+  const startedA = await a.take('restart');
+  const startedB = await b.take('restart');
+  assert.equal(startedA.room.state.players.length, 2);
+  assert.ok(startedB.room.state);
+
+  a.close();
+  b.close();
+});
+
+test('o\'yin o\'rtasida chiqib ketgan o\'yinchi navbatni to\'smaydi', async (t) => {
+  await startServer();
+  t.after(() => server.kill());
+
+  const a = client();
+  const b = client();
+  const c = client();
+  await Promise.all([a.open(), b.open(), c.open()]);
+
+  a.send({ t: 'create', name: 'Ali', mapId: 'klassik130', capacity: 3 });
+  const joinedA = await a.take('joined');
+  b.send({ t: 'join', code: joinedA.code, name: 'Vali' });
+  await b.take('joined');
+  c.send({ t: 'join', code: joinedA.code, name: 'Hasan' });
+  await c.take('joined');
+  await a.take('room');
+
+  // Navbat Ali da — u chiqib ketadi
+  a.send({ t: 'leave' });
+  await a.take('left');
+  const afterB = await b.take('roll');
+  assert.equal(afterB.room.state.players[0].left, true, 'chiqqan o\'yinchi belgilanadi');
+  assert.equal(afterB.room.state.turn, 1, 'navbat keyingisiga o\'tadi');
+  assert.ok(afterB.room.state.status === 'playing', 'qolgan ikkisi davom etadi');
+
+  // Vali tashlaydi — ishlaydi
+  b.send({ t: 'roll' });
+  const roll = await b.take('roll');
+  assert.equal(roll.room.state.lastRoll.playerId, 'seat1');
+
+  // Hasan ham chiqsa — o'yin tugaydi va Vali g'olib
+  c.send({ t: 'leave' });
+  await c.take('left');
+  const end = await b.take('roll');
+  assert.equal(end.room.state.status, 'finished');
+  assert.equal(end.room.state.ranking[0].name, 'Vali', 'qolgan o\'yinchi g\'olib');
+
+  a.close();
+  b.close();
+  c.close();
 });
 
 test('sinxronlash: mijoz holatni istalgan payt qayta so\'ray oladi', async (t) => {

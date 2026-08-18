@@ -198,9 +198,14 @@ export class OnlineClient {
     }
   }
 
-  async create({ name, mapId, rules }) {
+  async create({ name, mapId, rules, capacity }) {
     await this.connect();
-    this.send({ t: 'create', name, mapId, rules, ...this.ident() });
+    this.send({ t: 'create', name, mapId, rules, capacity, ...this.ident() });
+  }
+
+  /** Xona egasi to'lmagan xonada o'yinni boshlaydi. */
+  start() {
+    return this.send({ t: 'start' });
   }
 
   async join({ code, name }) {

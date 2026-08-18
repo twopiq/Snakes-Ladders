@@ -32,6 +32,7 @@ const S = {
   },
   online: {
     mapId: MAPS[0].id,
+    capacity: 2, // onlayn xonada 2 yoki 3 kishi
     rules: { ...DEFAULT_RULES, playToLast: false },
     room: null,
     mySeat: null,
@@ -180,6 +181,8 @@ async function init() {
 
   $('#playersMinus').addEventListener('click', () => changeCount(-1));
   $('#playersPlus').addEventListener('click', () => changeCount(1));
+  $('#onlineMinus').addEventListener('click', () => changeOnlineCount(-1));
+  $('#onlinePlus').addEventListener('click', () => changeOnlineCount(1));
   $('#startOffline').addEventListener('click', startOffline);
 
   $('#createRoom').addEventListener('click', createRoom);
@@ -302,6 +305,12 @@ function changeCount(delta) {
   renderPlayerInputs();
 }
 
+/** Onlayn xona sig'imi: 2 yoki 3 kishi. */
+function changeOnlineCount(delta) {
+  S.online.capacity = Math.max(2, Math.min(3, S.online.capacity + delta));
+  $('#onlineCount').textContent = S.online.capacity;
+}
+
 function renderPlayerInputs() {
   const root = $('#playerInputs');
   const saved = [...root.querySelectorAll('input')].map((i) => i.value);
@@ -372,7 +381,9 @@ function myName() {
 async function createRoom() {
   S.mode = 'online';
   try {
-    await net.create({ name: myName(), mapId: S.online.mapId, rules: S.online.rules });
+    await net.create({
+      name: myName(), mapId: S.online.mapId, rules: S.online.rules, capacity: S.online.capacity,
+    });
   } catch {
     toast('Serverga ulanib bo\'lmadi', 'bad');
   }
@@ -430,18 +441,29 @@ function applyRoom(room) {
 }
 
 function showWaitingRoom(room) {
-  const rematchInfo = room.players.map((p) => `${escapeHtml(p.name)}${p.online ? '' : ' (uzilgan)'}`).join(', ');
+  const capacity = room.capacity || 2;
+  const list = room.players.map((p) => `${escapeHtml(p.name)}${p.online ? '' : ' (uzilgan)'}`).join(', ');
+  const iAmHost = S.online.mySeat === 0;
+  const canStart = iAmHost && room.canStartEarly;
+
   showModal(`
     <h2>Xona tayyor</h2>
-    <p>Do'stingizga shu kodni yuboring — u "Kod bilan qo'shilish" bo'limiga kiritadi.</p>
+    <p>Do'stlaringizga shu kodni yuboring — ular "Kod bilan qo'shilish" bo'limiga kiritadi.</p>
     <div class="code-big" data-act="copy" title="Nusxalash">${room.code}</div>
-    <p>Xarita: <b>${escapeHtml(getMap(room.mapId).name)}</b><br>O'yinchilar: ${rematchInfo} (${room.players.length}/2)</p>
+    <p>Xarita: <b>${escapeHtml(getMap(room.mapId).name)}</b><br>
+    O'yinchilar (${room.players.length}/${capacity}): ${list}</p>
+    ${canStart ? '<p class="muted">Hamma yig\'ilishini kutmasdan boshlasangiz ham bo\'ladi.</p>' : ''}
     <div class="modal-actions">
+      ${canStart ? '<button class="primary" data-act="start">Hozir boshlash</button>' : ''}
       <button class="primary" data-act="invite">Do'stni chaqirish</button>
       <button class="ghost" data-act="copy">Kodni nusxalash</button>
       ${canPromote() ? '<button class="ghost" data-act="tg-invite">Telegram havolasi</button>' : ''}
       <button class="ghost" data-act="cancel">Bekor qilish</button>
     </div>`, (act) => {
+    if (act === 'start') {
+      net.start();
+      return;
+    }
     if (act === 'tg-invite') {
       const link = telegramAppLink(room.code);
       navigator.clipboard?.writeText(link).then(
@@ -504,7 +526,7 @@ function showHelp() {
     </ul>
     <h2 style="font-size:17px;margin-top:18px">Rejimlar</h2>
     <ul>
-      <li><b>Onlayn:</b> 2 kishi, real vaqtda. Xona kodi yoki tezkor juftlash orqali. Aloqa uzilsa 60 soniya ichida qaytish mumkin.</li>
+      <li><b>Onlayn:</b> 2 yoki 3 kishi, real vaqtda. Xona kodi yoki tezkor juftlash orqali. Aloqa uzilsa 60 soniya ichida qaytish mumkin.</li>
       <li><b>Oflayn:</b> bitta qurilmada 2–6 kishi navbat bilan.</li>
     </ul>
     <p style="margin-top:14px">Zar tashlash uchun <b>Bo'sh joy</b> tugmasini ham bosish mumkin.</p>

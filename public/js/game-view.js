@@ -370,9 +370,13 @@ export class GameView {
     for (let i = 0; i < state.players.length; i++) {
       const p = state.players[i];
       const card = document.createElement('div');
-      card.className = 'player-card' + (i === state.turn && state.status === 'playing' ? ' turn' : '') + (p.finished ? ' done' : '');
+      card.className = 'player-card'
+        + (i === state.turn && state.status === 'playing' ? ' turn' : '')
+        + (p.finished ? ' done' : '')
+        + (p.left ? ' left' : '');
       const meta = [];
-      if (p.finished) meta.push(`${p.rank}-o'rin 🏁`);
+      if (p.left) meta.push('chiqib ketdi 🚪');
+      else if (p.finished) meta.push(`${p.rank}-o'rin 🏁`);
       if (p.skipTurns > 0) meta.push(`${p.skipTurns} yurish o'tkazadi`);
       meta.push(`🪜 ${p.stats.ladders} · 🐍 ${p.stats.snakes}`);
       const you = this.mode === 'online' && i === this.mySeat ? ' (siz)' : '';

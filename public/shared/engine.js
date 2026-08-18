@@ -57,6 +57,7 @@ export function createGame({ mapId, players, rules = {}, seatOwners = null }) {
     skipTurns: 0,
     sixStreak: 0,
     finished: false,
+    left: false,
     rank: 0,
     owner: seatOwners ? seatOwners[i] ?? null : null,
     stats: { rolls: 0, ladders: 0, snakes: 0, sixes: 0, steps: 0 },
@@ -178,13 +179,7 @@ export function applyRoll(state, dice) {
 
     const remaining = next.players.filter((p) => !p.finished);
     if (!next.rules.playToLast || remaining.length <= 1) {
-      for (const p of remaining) {
-        p.rank = next.ranking.length + 1;
-        next.ranking.push({ playerId: p.id, name: p.name, rank: p.rank });
-      }
-      next.status = 'finished';
-      events.push({ type: 'gameover', ranking: next.ranking });
-      log(next, "O'yin tugadi", 'info');
+      closeGame(next, events);
       return { state: next, events };
     }
     extraTurn = false;
@@ -200,6 +195,55 @@ export function applyRoll(state, dice) {
   }
 
   return { state: next, events };
+}
+
+/**
+ * O'yinchi o'yinni tashlab ketdi (aloqa uzildi yoki "Chiqish" bosildi).
+ * Uning navbati o'tkazib yuboriladi, qolganlar o'ynashda davom etadi.
+ * Bitta o'yinchi qolsa — o'yin tugaydi va u g'olib bo'ladi.
+ */
+export function abandonPlayer(state, playerId) {
+  if (state.status !== 'playing') return { state, events: [] };
+  const idx = state.players.findIndex((p) => p.id === playerId);
+  if (idx < 0 || state.players[idx].finished) return { state, events: [] };
+
+  const next = cloneState(state);
+  const player = next.players[idx];
+  player.finished = true;
+  player.left = true;
+  const events = [{ type: 'left', playerId: player.id }];
+  log(next, `${player.name} o'yinni tark etdi`, 'bad');
+
+  const active = next.players.filter((p) => !p.finished);
+  if (active.length <= 1) {
+    // Qolgan o'yinchi g'olib
+    for (const p of active) {
+      p.finished = true;
+      p.rank = next.ranking.length + 1;
+      next.ranking.push({ playerId: p.id, name: p.name, rank: p.rank });
+      events.push({ type: 'finish', playerId: p.id, rank: p.rank });
+    }
+    closeGame(next, events);
+    return { state: next, events };
+  }
+
+  if (next.turn === idx) advanceTurn(next, events);
+  return { state: next, events };
+}
+
+/** O'yinni yakunlaydi va qolgan o'rinlarni taqsimlaydi. */
+function closeGame(state, events) {
+  const ranked = new Set(state.ranking.map((r) => r.playerId));
+  const rest = state.players.filter((p) => !ranked.has(p.id));
+  // Marraga yaqinroq turgan yuqori o'rinni oladi; tashlab ketganlar oxirida
+  rest.sort((a, b) => (Boolean(a.left) === Boolean(b.left) ? b.pos - a.pos : (a.left ? 1 : -1)));
+  for (const p of rest) {
+    p.rank = state.ranking.length + 1;
+    state.ranking.push({ playerId: p.id, name: p.name, rank: p.rank });
+  }
+  state.status = 'finished';
+  events.push({ type: 'gameover', ranking: state.ranking });
+  log(state, "O'yin tugadi", 'info');
 }
 
 /** Navbatni keyingi o'yinchiga o'tkazadi, tuzoqdagilarni o'tkazib yuboradi. */
@@ -221,8 +265,7 @@ function advanceTurn(state, events) {
     return;
   }
   // Hamma tugatgan bo'lsa
-  state.status = 'finished';
-  events.push({ type: 'gameover', ranking: state.ranking });
+  closeGame(state, events);
 }
 
 function log(state, text, kind = 'info') {

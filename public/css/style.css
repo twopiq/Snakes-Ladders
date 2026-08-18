@@ -902,3 +902,6 @@ a:hover { color: #7dd3fc; }
   .reward { grid-template-columns: auto 1fr; }
   .reward-state { grid-column: 2; text-align: right; }
 }
+
+.player-card.left { opacity: .5; }
+.player-card.left .who b { text-decoration: line-through; }
