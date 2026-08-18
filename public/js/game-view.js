@@ -247,7 +247,7 @@ export class GameView {
 
     // Qo'riqchi: animatsiya har qanday sababga ko'ra tugamasa ham,
     // holat baribir qo'llanadi va navbat bloklanib qolmaydi.
-    const budget = 1200 + events.length * 600;
+    const budget = 1500 + events.length * 1600;
     let guard;
     const guardPromise = new Promise((resolve) => {
       guard = setTimeout(resolve, budget);
@@ -307,7 +307,8 @@ export class GameView {
         const path = ev.bounced
           ? [...stepPath(from, state.size), ...stepPath(state.size, ev.to)]
           : stepPath(from, ev.to);
-        const speed = path.length > 6 ? 70 : 110;
+        // Dona ko'z bilan kuzatiladigan tezlikda yuradi (bir qadam shuncha ms)
+        const speed = path.length > 6 ? 140 : 220;
         for (const cell of path) {
           if (this.skip) break; // navbatda yangi yurish kutyapti — qolganini sakraymiz
           sound.step();
@@ -321,7 +322,7 @@ export class GameView {
         sound.ladder();
         haptic('success');
         await this.board.flash(ev.from, 160);
-        await this.board.glide(ev.playerId, ev.to, 460);
+        await this.board.glide(ev.playerId, ev.to, 920);
         toast(`${player?.name || ''} narvondan ${ev.from} → ${ev.to} ko'tarildi 🪜`);
         break;
 
@@ -329,7 +330,7 @@ export class GameView {
         sound.snake();
         haptic('error');
         await this.board.flash(ev.from, 160);
-        await this.board.glide(ev.playerId, ev.to, 500);
+        await this.board.glide(ev.playerId, ev.to, 1000);
         toast(`${player?.name || ''} ilonga tushdi: ${ev.from} → ${ev.to} 🐍`, 'bad');
         break;
 
