@@ -13,6 +13,7 @@ let api = null;
 let backHandler = null;
 let mainButtonHandler = null;
 let config = { enabled: false, botUsername: '', appShortName: '', inviteBase: '' };
+let version = '';
 
 /** SDK har doim ham modul yuklanishidan oldin tayyor bo'lmaydi — kerak bo'lganda olamiz. */
 function sdk() {
@@ -32,6 +33,7 @@ export async function loadConfig() {
     const res = await fetch('/api/config');
     const data = await res.json();
     config = { ...config, ...(data.telegram || {}) };
+    version = data.version || '';
   } catch {
     /* sozlama bo'lmasa ham ishlayveradi */
   }
@@ -39,6 +41,9 @@ export async function loadConfig() {
 }
 
 export const tgConfig = () => config;
+
+/** Serverdagi ilova versiyasi (deploy tekshirish uchun). */
+export const appVersion = () => version;
 
 /** Telegram ichida boshlang'ich sozlash. */
 export function initTelegram({ onBack } = {}) {

@@ -10,7 +10,7 @@ import { renderMenuPromo, openTelegramApp, canPromote, telegramAppLink } from '.
 import { sound } from './sound.js';
 import {
   isTelegram, initTelegram, loadConfig, tgUserName, initData, startParam,
-  shareRoom, showBackButton, setMainButton, setClosingConfirmation,
+  shareRoom, showBackButton, setMainButton, setClosingConfirmation, appVersion,
 } from './telegram.js';
 import { $, $$, showScreen, toast, showModal, hideModal } from './ui.js';
 
@@ -530,6 +530,7 @@ function showHelp() {
       <li><b>Oflayn:</b> bitta qurilmada 2–6 kishi navbat bilan.</li>
     </ul>
     <p style="margin-top:14px">Zar tashlash uchun <b>Bo'sh joy</b> tugmasini ham bosish mumkin.</p>
+    <p class="muted" style="font-size:11px">Versiya: ${escapeHtml(appVersion() || '—')}</p>
     <div class="modal-actions"><button class="primary" data-act="ok">Tushunarli</button></div>`,
     () => hideModal());
 }

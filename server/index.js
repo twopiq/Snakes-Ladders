@@ -3,7 +3,7 @@ import { WebSocketServer } from 'ws';
 
 import crypto from 'node:crypto';
 
-import { serveStatic } from './static.js';
+import { serveStatic, BUILD_ID } from './static.js';
 import { RoomStore } from './rooms.js';
 import { telegramConfig, telegramEnabled, resolveIdentity, verifyInitData, botToken, reasonText } from './telegram.js';
 import { Store } from './store.js';
@@ -30,10 +30,13 @@ const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://localhost');
 
   if (url.pathname === '/api/health') {
-    return json(res, 200, { ok: true, rooms: store.rooms.size, queue: store.queue.length, uptime: process.uptime() });
+    return json(res, 200, {
+      ok: true, version: BUILD_ID, rooms: store.rooms.size,
+      queue: store.queue.length, uptime: process.uptime(),
+    });
   }
   if (url.pathname === '/api/config') {
-    return json(res, 200, { telegram: telegramConfig() });
+    return json(res, 200, { version: BUILD_ID, telegram: telegramConfig() });
   }
   if (url.pathname === '/api/maps') {
     return json(res, 200, MAPS.map((m) => ({

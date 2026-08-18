@@ -52,6 +52,21 @@ export async function reportPlayed() {
 export function renderFriends() {
   const root = $('#friendsBody');
   if (!root) return;
+  try {
+    renderFriendsInner(root);
+  } catch (err) {
+    // Ekran bo'sh qolib ketmasligi uchun — xatoni ko'rsatamiz
+    console.error('friends render:', err);
+    root.innerHTML = `
+      <div class="panel">
+        <h3>Ekranni ochib bo'lmadi</h3>
+        <p class="muted">Ilovani yopib, qaytadan oching. Muammo qolsa — botga /support yozing.</p>
+        <p class="muted" style="font-family:ui-monospace,monospace;font-size:11px">${escapeHtml(String(err.message || err))}</p>
+      </div>`;
+  }
+}
+
+function renderFriendsInner(root) {
 
   if (!isTelegram()) {
     root.innerHTML = `

@@ -113,6 +113,13 @@ chunki xarid Telegram hisobiga bog'lanishi shart.
 
 **Mini App oq ekran** — Web App URL albatta `https://` bo'lishi kerak, `http://` ishlamaydi.
 
+**Yangi bo'lim bo'sh ko'rinadi (masalan "Do'stlar")** — Telegram ichidagi brauzer
+eski JS faylni keshdan olgan, HTML esa yangi. Server endi kod fayllarini
+`no-cache` bilan uzatadi va HTML ichidagi manzillarga versiya qo'shadi
+(`app.js?v=...`), shuning uchun bu takrorlanmasligi kerak. Agar baribir bo'lsa:
+ilovani butunlay yopib qayta oching yoki Telegram sozlamalarida keshni tozalang.
+Qaysi versiya ishlayotganini "?" tugmasi ostidagi oynada ko'rish mumkin.
+
 **Taklif havolasi oddiy saytga olib boradi** — `BOT_USERNAME` yoki `APP_SHORT_NAME`
 sozlanmagan; `/api/config` dagi `inviteBase` bo'sh bo'lsa shunday bo'ladi.
 
