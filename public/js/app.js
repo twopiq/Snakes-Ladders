@@ -4,6 +4,7 @@ import { MAPS, getMap, mapSize } from '../shared/maps.js';
 import { createGame, applyRoll, rollDice, DEFAULT_RULES, PLAYER_COLORS, MIN_PLAYERS, MAX_PLAYERS } from '../shared/engine.js';
 import { GameView, escapeHtml } from './game-view.js';
 import { OnlineClient } from './online.js';
+import { loadShop, renderShop, equippedNow, onEquipChange } from './shop.js';
 import { sound } from './sound.js';
 import {
   isTelegram, initTelegram, loadConfig, tgUserName, initData, startParam,
@@ -41,6 +42,7 @@ const S = {
 /** Ekranni almashtiradi va Telegram'ning "orqaga" tugmasini moslaydi. */
 function goto(screenId) {
   showScreen(screenId);
+  if (screenId === 'screen-shop') renderShop();
   showBackButton(screenId !== 'screen-menu');
   if (screenId !== 'screen-game') setMainButton({ show: false });
 }
@@ -53,7 +55,11 @@ function handleBack() {
 
 // ---------------------------------------------------------------- ko'rinish
 const view = new GameView({
-  onRoll: () => (S.mode === 'offline' ? offlineRoll() : net.roll()),
+  onRoll: () => requestRoll(),
+  // Sahifaga qaytganda (telefon ekrani yonganda) holatni serverdan qayta olamiz
+  onVisible: () => {
+    if (S.mode === 'online' && S.online.inGame) net.sync();
+  },
   onRematch: () => (S.mode === 'offline' ? offlineRematch() : onlineRematch()),
   onLeave: () => leaveGame(),
   onChat: (text) => {
@@ -65,14 +71,20 @@ const view = new GameView({
       show: true,
       text: finished ? "O'yin tugadi" : label,
       enabled: canRoll,
-      onClick: () => {
-        if (!view.canRoll()) return;
-        if (S.mode === 'offline') offlineRoll();
-        else net.roll();
-      },
+      onClick: () => requestRoll(),
     });
   },
 });
+
+/**
+ * Zar tashlash so'rovi.
+ * Onlaynda ulanish uzilgan bo'lsa — jim qolmaymiz: xabar beramiz va qayta ulanamiz.
+ */
+function requestRoll() {
+  if (!view.canRoll()) return;
+  if (S.mode === 'offline') return offlineRoll();
+  if (!net.roll()) toast("Aloqa uzilgan — qayta ulanmoqda...", 'bad');
+}
 
 // ---------------------------------------------------------------- onlayn mijoz
 const net = new OnlineClient({
@@ -125,6 +137,17 @@ const net = new OnlineClient({
     hideModal();
     toast(msg, 'bad', 3600);
   },
+  // Xona yo'qolgan (server qayta ishga tushgan) — o'yinni yopamiz
+  onRoomGone: (msg) => {
+    S.online.room = null;
+    S.online.inGame = false;
+    S.mode = null;
+    hideModal();
+    setClosingConfirmation(false);
+    setMainButton({ show: false });
+    goto('screen-online');
+    toast(`${msg} — yangi xona oching`, 'bad', 5000);
+  },
   onDisconnected: () => {
     if (S.mode === 'online' && S.online.inGame) toast('Aloqa uzildi — qayta ulanmoqda...', 'bad');
   },
@@ -159,6 +182,7 @@ async function init() {
   nameInput.value = localStorage.getItem('il_name') || '';
   nameInput.addEventListener('change', () => localStorage.setItem('il_name', nameInput.value.trim()));
 
+  $('#shopBtn').addEventListener('click', () => goto('screen-shop'));
   $('#helpBtn').addEventListener('click', showHelp);
   const soundBtn = $('#soundBtn');
   soundBtn.classList.toggle('off', !sound.enabled);
@@ -173,8 +197,15 @@ async function init() {
     if (e.target.id === 'overlay') hideModal();
   });
 
+  onEquipChange((equipped) => {
+    view.board?.setSkins(equipped);
+  });
+
   await loadConfig();
   initTelegram({ onBack: handleBack });
+  loadShop().then(() => {
+    if ($('#screen-shop').classList.contains('active')) renderShop();
+  });
 
   if (isTelegram()) {
     const name = tgUserName();
@@ -277,6 +308,11 @@ function renderPlayerInputs() {
 }
 
 // ---------------------------------------------------------------- oflayn
+/** Taxta ochilgach kiyilgan ko'rinishlarni qo'llaydi. */
+function applySkins() {
+  view.board?.setSkins(equippedNow());
+}
+
 function startOffline() {
   const inputs = [...$('#playerInputs').querySelectorAll('input')];
   const players = inputs.map((input, i) => ({
@@ -291,6 +327,7 @@ function startOffline() {
   goto('screen-game');
   setClosingConfirmation(true);
   view.open({ state: S.state, mode: 'offline' });
+  applySkins();
 }
 
 function offlineRoll() {
@@ -306,6 +343,7 @@ function offlineRematch() {
   if (!S.offline.config) return goto('screen-offline');
   S.state = createGame(S.offline.config);
   view.open({ state: S.state, mode: 'offline' });
+  applySkins();
 }
 
 // ---------------------------------------------------------------- onlayn
@@ -361,6 +399,7 @@ function applyRoom(room) {
     goto('screen-game');
     setClosingConfirmation(true);
     view.open({ state: room.state, mode: 'online', mySeat: S.online.mySeat, roomCode: room.code });
+    applySkins();
     for (const msg of room.chat || []) {
       view.addChat({ from: msg.from, text: msg.text, mine: msg.seat === S.online.mySeat });
     }

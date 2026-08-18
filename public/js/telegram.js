@@ -151,6 +151,32 @@ export function setClosingConfirmation(on) {
   safe(() => (on ? sdk().enableClosingConfirmation() : sdk().disableClosingConfirmation()));
 }
 
+/**
+ * Stars to'lovi oynasini ochadi.
+ * Qaytadi: 'paid' | 'cancelled' | 'failed' | 'pending' | 'unsupported'
+ */
+export function openInvoice(link) {
+  return new Promise((resolve) => {
+    const a = sdk();
+    if (!isTelegram() || typeof a?.openInvoice !== 'function') return resolve('unsupported');
+    try {
+      a.openInvoice(link, (status) => resolve(status));
+    } catch {
+      resolve('failed');
+    }
+  });
+}
+
+/** Telegram ilovasining versiyasi kerakli darajadami? */
+export function supportsVersion(v) {
+  const a = sdk();
+  try {
+    return Boolean(a?.isVersionAtLeast?.(v));
+  } catch {
+    return false;
+  }
+}
+
 // ---------------------------------------------------------------- haptika
 
 const IMPACT = { light: 'light', medium: 'medium', heavy: 'heavy', rigid: 'rigid', soft: 'soft' };

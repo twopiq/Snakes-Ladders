@@ -17,6 +17,9 @@ const MAX_AGE_SEC = 24 * 60 * 60;
 
 export const telegramEnabled = Boolean(BOT_TOKEN);
 
+/** Bot tokeni (faqat server ichida ishlatiladi). */
+export const botToken = () => BOT_TOKEN;
+
 /** Mijozga beriladigan sozlama (maxfiy token bu yerda yo'q). */
 export function telegramConfig() {
   return {

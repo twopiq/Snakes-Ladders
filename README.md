@@ -6,6 +6,7 @@ Qo'lda chizilgan "Ilonlar va Narvonlar" stol o'yinining elektron ko'rinishi.
 - **Onlayn** — 2 kishi, real vaqtda (WebSocket). Xona kodi orqali yoki tezkor juftlash bilan.
 - **Oflayn** — bitta qurilmada 2 dan 6 kishigacha, navbat bilan.
 - **5 ta katta xarita** — 120 dan 196 katakkacha.
+- **Do'kon** — fishka, narvon, ilon va taxta ko'rinishlari; Telegram Stars (⭐) orqali ([sozlash](docs/monetizatsiya.md)).
 - Brauzerda ishlaydi, telefon va kompyuterga moslashadi. Ovoz effektlari, chat, o'yin jurnali.
 
 ## Ishga tushirish
@@ -78,11 +79,18 @@ bosishi bilan to'g'ridan-to'g'ri xonangizga tushadi.
 Muhit o'zgaruvchilari: `BOT_TOKEN`, `BOT_USERNAME`, `APP_SHORT_NAME`.
 To'liq yo'riqnoma: [docs/telegram-mini-app.md](docs/telegram-mini-app.md).
 
-Ixtiyoriy bot (`/start` tugmasi va inline taklif uchun):
+Bot (`/start`, inline taklif va Stars to'lovlari) **server ichida** ishlaydi —
+`BOT_TOKEN` berilsa avtomatik ishga tushadi, alohida jarayon kerak emas.
 
-```bash
-BOT_TOKEN=... WEBAPP_URL=https://sayt.onrender.com npm run bot
-```
+## Do'kon va monetizatsiya
+
+Ko'rinishlar Telegram Stars orqali sotiladi, narxlarni admin panelidan
+(`/admin`, `ADMIN_PASSWORD` bilan) istalgan vaqt oshirish yoki tushirish mumkin.
+Har bir bo'limda bitta bepul variant bor — hech narsa sotib olmagan o'yinchi ham
+to'liq o'ynaydi.
+
+To'liq yo'riqnoma: [docs/monetizatsiya.md](docs/monetizatsiya.md)
+(muhim: doimiy disk sozlanmasa, xaridlar deploydan keyin yo'qoladi).
 
 ## Loyiha tuzilishi
 
@@ -91,6 +99,8 @@ server/
   index.js       HTTP + WebSocket server, xabarlar protokoli
   rooms.js       Onlayn xonalar, o'rinlar, qayta ulanish, tezkor juftlash
   telegram.js    Mini App initData imzosini tekshirish, sozlama
+  bot.js         Telegram bot va Stars to'lovlari (server ichida)
+  store.js       O'yinchilar, xaridlar va narxlar (JSON saqlagich)
   static.js      public/ katalogini xavfsiz uzatish
 public/
   index.html     Ekranlar: menyu, oflayn sozlama, onlayn lobbi, o'yin
@@ -99,22 +109,37 @@ public/
     app.js       Ekranlar va rejimlarni bog'lash
     game-view.js O'yin ekrani, animatsiyalar, natijalar
     board.js     Canvas: taxta, ilon/narvon chizish, donalar harakati
-    online.js    WebSocket mijozi
+    online.js    WebSocket mijozi (yurak urishi, qayta ulanish, sinxronlash)
     telegram.js  Telegram Mini App integratsiyasi
+    shop.js      Do'kon: ko'rinishlar, Stars xaridlari
+    admin.js     Admin paneli (narxlar, xaridlar, qaytarish)
     sound.js     Ovoz effektlari
     ui.js        DOM yordamchilari
   shared/
     maps.js      Xaritalar (server va brauzer uchun umumiy)
     engine.js    O'yin qoidalari — sof funksiyalar, umumiy
-bot/bot.js          Ixtiyoriy Telegram bot (/start, inline taklif)
+    cosmetics.js Ko'rinishlar katalogi va narxlari
+  admin.html     Narx boshqaruvi sahifasi
 tools/gen-maps.mjs  Xarita generatori
-docs/               Telegram Mini App yo'riqnomasi
+docs/               Telegram Mini App va monetizatsiya yo'riqnomalari
 test/               Qoidalar, xaritalar va onlayn rejim testlari
 ```
 
 `shared/` ichidagi qoidalar moduli ikkala tomonda ham ishlatiladi: oflayn rejimda
 brauzer o'zi hisoblaydi, onlayn rejimda esa server — kod bitta bo'lgani uchun
 natijalar bir xil bo'ladi.
+
+## Aloqa uzilishiga chidamlilik
+
+Mobil tarmoqda ulanish "yarim ochiq" qolishi mumkin — brauzer ulanish tirik deb
+o'ylaydi, lekin serverdan xabar kelmaydi. Shunga qarshi:
+
+- mijoz har 12 soniyada `ping` yuboradi va javob kelmasa ulanishni yangilaydi;
+- zar tashlagandan keyin 2,5 soniya ichida javob kelmasa — avtomatik sinxronlash;
+- telefon ekrani yonganda (sahifa fondan qaytganda) holat serverdan qayta olinadi;
+- animatsiya kadrlari kelmasa (fon rejimi) yurish darhol yakunlanadi — o'yin
+  hech qachon "qotib" qolmaydi;
+- server navbat xatosiga javoban joriy holatni ham yuboradi.
 
 ## Boshqaruv
 

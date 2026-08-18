@@ -1,15 +1,30 @@
 import http from 'node:http';
 import { WebSocketServer } from 'ws';
 
+import crypto from 'node:crypto';
+
 import { serveStatic } from './static.js';
 import { RoomStore } from './rooms.js';
-import { telegramConfig, telegramEnabled, resolveIdentity } from './telegram.js';
+import { telegramConfig, telegramEnabled, resolveIdentity, verifyInitData, botToken } from './telegram.js';
+import { Store } from './store.js';
+import { createBot } from './bot.js';
 import { MAPS } from '../public/shared/maps.js';
+import { COSMETICS } from '../public/shared/cosmetics.js';
 
 const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || '0.0.0.0';
 
 const store = new RoomStore();
+const shop = new Store();
+
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
+const WEBAPP_URL = (process.env.WEBAPP_URL || '').replace(/\/$/, '');
+
+// Bot va Stars to'lovlari — faqat token berilgan bo'lsa
+const bot = telegramEnabled && process.env.DISABLE_BOT !== '1'
+  ? createBot({ token: botToken(), store: shop, webappUrl: WEBAPP_URL })
+  : null;
+bot?.start();
 
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://localhost');
@@ -25,6 +40,16 @@ const server = http.createServer((req, res) => {
       id: m.id, name: m.name, about: m.about, cols: m.cols, rows: m.rows, size: m.cols * m.rows,
       ladders: Object.keys(m.ladders).length, snakes: Object.keys(m.snakes).length,
     })));
+  }
+  if (url.pathname === '/api/catalog') {
+    return json(res, 200, { items: catalogForClient(), starsEnabled: Boolean(bot) });
+  }
+  if (url.pathname.startsWith('/api/shop/') || url.pathname.startsWith('/api/admin/')) {
+    return handleApi(req, res, url);
+  }
+  if (url.pathname === '/admin' || url.pathname === '/admin/') {
+    req.url = '/admin.html';
+    return serveStatic(req, res);
   }
   if (url.pathname === '/api/room' && url.searchParams.has('code')) {
     const room = store.get(url.searchParams.get('code'));
@@ -110,10 +135,11 @@ function handle(ws, msg) {
     }
 
     case 'rejoin': {
+      // Server qayta ishga tushgan bo'lsa xonalar yo'qoladi — mijozga aniq belgi beramiz
       const room = store.get(msg.code);
-      if (!room) return send(ws, { t: 'error', msg: 'Xona endi mavjud emas' });
+      if (!room) return send(ws, { t: 'error', msg: 'Xona endi mavjud emas', code: 'room-gone' });
       const player = room.byToken(msg.token);
-      if (!player) return send(ws, { t: 'error', msg: "Bu xonada o'rningiz qolmagan" });
+      if (!player) return send(ws, { t: 'error', msg: "Bu xonada o'rningiz qolmagan", code: 'room-gone' });
       player.ws = ws;
       player.online = true;
       player.lastSeen = Date.now();
@@ -152,8 +178,20 @@ function handle(ws, msg) {
       if (!room) return;
       if (!room.full || !room.state) return send(ws, { t: 'error', msg: 'Raqib hali qo\'shilmagan' });
       const result = room.roll(ws.ctx.token);
-      if (result.error) return send(ws, { t: 'error', msg: result.error });
+      if (result.error) {
+        send(ws, { t: 'error', msg: result.error });
+        // Mijoz holati eskirgan bo'lishi mumkin — darhol joriy holatni yuboramiz
+        return sendRoom(ws, room);
+      }
       broadcastRoom(room, 'roll', { dice: result.dice, events: result.events });
+      break;
+    }
+
+    case 'sync': {
+      // Mijoz uzilib-ulangach yoki fondan qaytgach holatni so'raydi
+      const room = requireRoom(ws);
+      if (!room) return;
+      sendRoom(ws, room);
       break;
     }
 
@@ -227,6 +265,12 @@ function broadcastRoom(room, type = 'room', extra = {}) {
   for (const p of room.players) send(p.ws, { t: type, room: snap, seat: p.seat, ...extra });
 }
 
+/** Bitta mijozga joriy holatni yuboradi (sinxronlash uchun). */
+function sendRoom(ws, room) {
+  const player = room.byToken(ws.ctx.token);
+  send(ws, { t: 'room', room: room.snapshot(), seat: player ? player.seat : undefined });
+}
+
 function notify(room, text) {
   broadcast(room, { t: 'notice', text });
 }
@@ -235,6 +279,141 @@ function json(res, status, body) {
   const data = JSON.stringify(body);
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' });
   res.end(data);
+}
+
+// ---------------------------------------------------------------- do'kon va admin API
+
+/** Katalog + amaldagi narxlar (mijoz narxni har doim shu yerdan oladi). */
+function catalogForClient() {
+  return COSMETICS.map((item) => ({
+    id: item.id,
+    slot: item.slot,
+    name: item.name,
+    about: item.about,
+    rarity: item.rarity,
+    grants: item.grants || null,
+    style: item.style || null,
+    price: shop.price(item.id),
+    basePrice: item.price,
+    disabled: shop.isDisabled(item.id),
+  }));
+}
+
+function readBody(req, limit = 8000) {
+  return new Promise((resolve, reject) => {
+    let raw = '';
+    req.on('data', (chunk) => {
+      raw += chunk;
+      if (raw.length > limit) {
+        reject(new Error('juda katta'));
+        req.destroy();
+      }
+    });
+    req.on('end', () => {
+      try {
+        resolve(raw ? JSON.parse(raw) : {});
+      } catch {
+        reject(new Error('json emas'));
+      }
+    });
+    req.on('error', reject);
+  });
+}
+
+/** Admin kalitini tekshiradi (vaqt bo'yicha xavfsiz solishtirish). */
+function adminOk(req) {
+  if (!ADMIN_PASSWORD) return false;
+  const given = String(req.headers['x-admin-key'] || '');
+  const a = crypto.createHash('sha256').update(given).digest();
+  const b = crypto.createHash('sha256').update(ADMIN_PASSWORD).digest();
+  return crypto.timingSafeEqual(a, b);
+}
+
+/** Do'kon so'rovlarida o'yinchini aniqlash — faqat imzolangan Telegram ma'lumoti. */
+function shopUser(body) {
+  if (!telegramEnabled) return { ok: false, error: 'Do\'kon faqat Telegram ichida ishlaydi' };
+  const res = verifyInitData(body.initData);
+  if (!res.ok) return { ok: false, error: 'Telegram tekshiruvidan o\'tmadi' };
+  return { ok: true, tgId: res.user.id, name: res.user.name };
+}
+
+async function handleApi(req, res, url) {
+  const path = url.pathname;
+
+  // ---- admin
+  if (path.startsWith('/api/admin/')) {
+    if (!ADMIN_PASSWORD) return json(res, 503, { error: 'ADMIN_PASSWORD sozlanmagan' });
+    if (!adminOk(req)) return json(res, 401, { error: 'Kalit noto\'g\'ri' });
+
+    if (path === '/api/admin/overview') {
+      return json(res, 200, {
+        items: catalogForClient(),
+        stats: shop.stats(),
+        starsEnabled: Boolean(bot),
+      });
+    }
+
+    let body;
+    try {
+      body = await readBody(req);
+    } catch {
+      return json(res, 400, { error: 'So\'rov formati noto\'g\'ri' });
+    }
+
+    if (path === '/api/admin/price') {
+      const result = shop.setPrice(body.itemId, body.stars === null ? null : Number(body.stars));
+      return json(res, result.ok ? 200 : 400, result);
+    }
+    if (path === '/api/admin/disabled') {
+      const result = shop.setDisabled(body.itemId, Boolean(body.disabled));
+      return json(res, result.ok ? 200 : 400, result);
+    }
+    if (path === '/api/admin/refund') {
+      const purchase = shop.findPurchase(String(body.chargeId || ''));
+      if (!purchase) return json(res, 404, { error: 'Bunday xarid topilmadi' });
+      if (!bot) return json(res, 503, { error: 'Bot ulanmagan — qaytarib bo\'lmaydi' });
+      const result = await bot.refund({ tgId: purchase.tgId, chargeId: purchase.chargeId });
+      return json(res, result.ok ? 200 : 400, result);
+    }
+    return json(res, 404, { error: 'Topilmadi' });
+  }
+
+  // ---- do'kon
+  let body;
+  try {
+    body = await readBody(req);
+  } catch {
+    return json(res, 400, { error: 'So\'rov formati noto\'g\'ri' });
+  }
+
+  const who = shopUser(body);
+  if (!who.ok) return json(res, 401, { error: who.error });
+
+  if (path === '/api/shop/profile') {
+    const user = shop.user(who.tgId);
+    return json(res, 200, {
+      tgId: who.tgId,
+      name: who.name,
+      owned: user.owned,
+      equipped: user.equipped,
+      starsSpent: user.starsSpent,
+      items: catalogForClient(),
+      starsEnabled: Boolean(bot),
+    });
+  }
+
+  if (path === '/api/shop/equip') {
+    const result = shop.equip(who.tgId, String(body.slot), String(body.itemId));
+    return json(res, result.ok ? 200 : 400, result);
+  }
+
+  if (path === '/api/shop/invoice') {
+    if (!bot) return json(res, 503, { error: 'To\'lovlar hozircha yoqilmagan' });
+    const result = await bot.createInvoice({ itemId: String(body.itemId), tgId: who.tgId });
+    return json(res, result.ok ? 200 : 400, result);
+  }
+
+  return json(res, 404, { error: 'Topilmadi' });
 }
 
 // Uzilib qolgan ulanishlarni aniqlash

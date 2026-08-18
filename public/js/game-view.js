@@ -28,6 +28,8 @@ export class GameView {
     this.board = null;
     this.animating = false;
     this.chain = Promise.resolve();
+    this.gen = 0; // har bir yangi o'yin/ochilishda oshadi — eski animatsiyalar bekor bo'ladi
+    this.resultsShown = false;
 
     this.el = {
       canvas: $('#board'),
@@ -82,6 +84,14 @@ export class GameView {
 
     window.addEventListener('resize', () => this.board?.resize());
 
+    // Telefon ekrani o'chib-yonganda yoki boshqa ilovadan qaytganda:
+    // qotib qolgan animatsiyani yopamiz va holatni serverdan qayta so'raymiz.
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) return;
+      if (this.animating) this.forceFinish();
+      this.on.onVisible?.();
+    });
+
     // Bo'sh joy / Enter bilan zar tashlash
     document.addEventListener('keydown', (e) => {
       if ($('#screen-game').classList.contains('active') === false) return;
@@ -95,6 +105,12 @@ export class GameView {
 
   /** O'yin ekranini ochadi va taxtani quradi. */
   open({ state, mode, mySeat = null, roomCode = null }) {
+    // Oldingi o'yindan qolgan animatsiya yangi o'yin ustiga chizmasligi uchun
+    this.gen++;
+    this.animating = false;
+    this.chain = Promise.resolve();
+    this.resultsShown = false;
+
     this.mode = mode;
     this.state = state;
     this.mySeat = mySeat;
@@ -154,28 +170,65 @@ export class GameView {
   }
 
   async _update(state, events) {
-    if (!events.length) {
-      this.state = state;
-      this.board.setPlayers(state.players);
-      this.render();
+    // Sahifa fonda bo'lsa animatsiya ishlamaydi — holatni darhol qo'llaymiz
+    if (!events.length || document.hidden) {
+      this.applyInstant(state);
       return;
     }
 
+    const gen = this.gen;
+    // Har bir yurishda animatsiyani qaytadan sinab ko'ramiz (sharoit yaxshilangan bo'lishi mumkin)
+    if (this.board) this.board.rafOk = true;
     this.animating = true;
     this.state = state;
     // Meta ma'lumot yangilanadi, lekin donalar animatsiya uchun joyida qoladi
     this.board.setPlayers(state.players, false);
     this.render();
 
-    for (const ev of events) await this.playEvent(ev, state);
+    // Qo'riqchi: animatsiya har qanday sababga ko'ra tugamasa ham,
+    // holat baribir qo'llanadi va navbat bloklanib qolmaydi.
+    const budget = 2000 + events.length * 900;
+    let guard;
+    const guardPromise = new Promise((resolve) => {
+      guard = setTimeout(resolve, budget);
+    });
 
-    // Kafolat: oxirida hamma dona o'z katagida
-    for (const p of state.players) this.board.snapTo(p.id, p.pos);
-    this.board.setPlayers(state.players);
+    await Promise.race([
+      (async () => {
+        for (const ev of events) {
+          if (this.gen !== gen) return; // yangi o'yin boshlandi — eskisini tashlaymiz
+          await this.playEvent(ev, state);
+        }
+      })(),
+      guardPromise,
+    ]);
+    clearTimeout(guard);
+
+    if (this.gen !== gen) return;
+    this.applyInstant(state);
+  }
+
+  /** Holatni animatsiyasiz, darhol qo'llaydi (kafolatli yakun). */
+  applyInstant(state) {
+    this.state = state;
+    if (this.board) {
+      for (const p of state.players) this.board.snapTo(p.id, p.pos);
+      this.board.setPlayers(state.players);
+    }
     this.animating = false;
     this.render();
+    if (state.status === 'finished' && !this.resultsShown) {
+      this.resultsShown = true;
+      this.showResults(state);
+    }
+    if (state.status !== 'finished') this.resultsShown = false;
+  }
 
-    if (state.status === 'finished') this.showResults(state);
+  /** Qotib qolgan animatsiyani majburan yakunlaydi. */
+  forceFinish() {
+    this.gen++;
+    this.chain = Promise.resolve();
+    if (this.state) this.applyInstant(this.state);
   }
 
   async playEvent(ev, state) {

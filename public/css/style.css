@@ -614,3 +614,149 @@ body.tg .side-actions { margin-bottom: 8px; }
   body.tg .modal { border-radius: 18px; padding: 18px; }
   body.tg .modal .code-big { font-size: 32px; }
 }
+
+/* ---------- do'kon ---------- */
+.shop-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.shop-stars {
+  font-size: 13px;
+  color: var(--gold);
+  background: var(--panel);
+  border: 1px solid #5b4b12;
+  border-radius: 999px;
+  padding: 5px 12px;
+}
+
+.shop-tabs { flex-wrap: wrap; margin-bottom: 0; }
+.shop-tabs .tab { flex: 1 1 auto; min-width: 90px; border-radius: 10px; }
+
+.shop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.shop-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas: "preview info" "action action";
+  gap: 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+}
+.shop-card.equipped { border-color: var(--accent-2); box-shadow: inset 0 0 0 1px var(--accent-2); }
+
+.shop-preview {
+  grid-area: preview;
+  width: 96px;
+  height: 78px;
+  display: grid;
+  place-items: center;
+  background: var(--panel-2);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.shop-preview canvas { max-width: 100%; height: auto; }
+.bundle-emoji { font-size: 38px; }
+
+.shop-info { grid-area: info; min-width: 0; }
+.shop-info b { display: block; font-size: 15px; }
+.shop-info .rarity { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; font-weight: 700; }
+.shop-info small { display: block; color: var(--muted); font-size: 12px; line-height: 1.45; margin-top: 4px; }
+.bundle-list { color: var(--accent) !important; margin-top: 6px !important; }
+
+.shop-action { grid-area: action; display: grid; }
+.shop-action button { width: 100%; }
+.shop-owned {
+  text-align: center;
+  font-size: 13px;
+  color: var(--accent-2);
+  font-weight: 600;
+  padding: 9px;
+  background: var(--panel-2);
+  border-radius: 10px;
+}
+
+@media (max-width: 520px) {
+  .shop-grid { grid-template-columns: 1fr; }
+}
+
+/* ---------- admin paneli ---------- */
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+.stat {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+  text-align: center;
+}
+.stat b { display: block; font-size: 22px; }
+.stat span { color: var(--muted); font-size: 12px; }
+.stat.ok b { color: var(--accent-2); }
+.stat.warn b { color: var(--danger); }
+
+.price-table, .purchases { display: grid; gap: 8px; }
+
+.price-row {
+  display: grid;
+  grid-template-columns: 1.6fr .7fr 1fr auto;
+  gap: 12px;
+  align-items: center;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+.price-row.off { opacity: .55; border-style: dashed; }
+.pr-name b { display: block; font-size: 14px; }
+.pr-name small, .pr-price small, .pr-sold small { color: var(--muted); font-size: 11px; display: block; margin-top: 2px; }
+.pr-sold { text-align: center; }
+.pr-sold b { font-size: 16px; }
+.pr-price input { padding: 8px 10px; font-size: 14px; }
+.pr-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.pr-actions button { padding: 8px 12px; font-size: 13px; }
+
+.purchase {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 12px;
+  align-items: center;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+.purchase.refunded { opacity: .5; }
+.purchase small { display: block; color: var(--muted); font-size: 11px; }
+.purchase .charge { font-family: ui-monospace, monospace; font-size: 10px; word-break: break-all; }
+.p-stars { color: var(--gold); font-weight: 700; }
+
+@media (max-width: 700px) {
+  .price-row, .purchase { grid-template-columns: 1fr; }
+  .pr-sold { text-align: left; }
+}
+
+/* havolalar */
+a { color: var(--accent); }
+a:hover { color: #7dd3fc; }
+
+.shop-preview { width: 112px; height: 96px; }
+
+/* havolalar */
+a { color: var(--accent); }
+a:hover { color: #7dd3fc; }
+
+.shop-preview { width: 116px; height: 100px; }

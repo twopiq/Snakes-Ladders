@@ -134,6 +134,66 @@ test('onlayn rejim: xona, navbat, sinxron holat', async (t) => {
   b2.close();
 });
 
+test('sinxronlash: mijoz holatni istalgan payt qayta so\'ray oladi', async (t) => {
+  await startServer();
+  t.after(() => server.kill());
+
+  const a = client();
+  const b = client();
+  await Promise.all([a.open(), b.open()]);
+
+  a.send({ t: 'create', name: 'Ali', mapId: 'klassik130' });
+  const joinedA = await a.take('joined');
+  b.send({ t: 'join', code: joinedA.code, name: 'Vali' });
+  await b.take('joined');
+  await a.take('room');
+
+  // Bir necha yurish qilamiz
+  a.send({ t: 'roll' });
+  const roll = await a.take('roll');
+  const positions = roll.room.state.players.map((p) => p.pos);
+
+  // "sync" — joriy holat qaytadi (o'z o'rni bilan)
+  a.send({ t: 'sync' });
+  const synced = await a.take('room');
+  assert.deepEqual(synced.room.state.players.map((p) => p.pos), positions);
+  assert.equal(synced.seat, 0);
+
+  // ping/pong — ulanish tirikligini tekshirish uchun
+  b.send({ t: 'ping' });
+  const pong = await b.take('pong');
+  assert.equal(pong.t, 'pong');
+
+  a.close();
+  b.close();
+});
+
+test('navbat emasligi haqidagi xatoga holat ham qo\'shib yuboriladi', async (t) => {
+  await startServer();
+  t.after(() => server.kill());
+
+  const a = client();
+  const b = client();
+  await Promise.all([a.open(), b.open()]);
+
+  a.send({ t: 'create', name: 'Ali', mapId: 'klassik130' });
+  const joinedA = await a.take('joined');
+  b.send({ t: 'join', code: joinedA.code, name: 'Vali' });
+  await b.take('joined');
+
+  // Navbat A da — B tashlamoqchi bo'ladi
+  b.send({ t: 'roll' });
+  await b.take('error');
+  // Mijoz eskirgan holat bilan qolib ketmasligi uchun server holatni ham yuboradi
+  const fresh = await b.take('room');
+  assert.ok(fresh.room.state, 'xatodan keyin joriy holat keladi');
+  assert.equal(fresh.seat, 1);
+  assert.equal(fresh.room.state.turn, 0);
+
+  a.close();
+  b.close();
+});
+
 test("qayta o'yin: ikkala tomon rozi bo'lgach o'rinlar almashadi", async (t) => {
   await startServer();
   t.after(() => server.kill());

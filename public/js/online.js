@@ -2,6 +2,17 @@
 
 const STORAGE_KEY = 'il_session';
 
+/**
+ * Mobil tarmoqlarda ulanish "yarim ochiq" qolishi mumkin: brauzer ulanish tirik
+ * deb o'ylaydi, lekin serverdan xabarlar kelmaydi. Shuning uchun har PING_MS da
+ * ping yuboramiz; PONG_TIMEOUT ichida javob kelmasa — ulanishni yopib, qaytadan
+ * ulanamiz va xonaga qayta kiramiz.
+ */
+const PING_MS = 12000;
+const PONG_TIMEOUT = 6000;
+/** So'rovdan keyin javob shuncha kutiladi, keyin sinxronlash boshlanadi. */
+const REPLY_TIMEOUT = 2500;
+
 export class OnlineClient {
   constructor(handlers = {}) {
     this.on = handlers;
@@ -10,6 +21,10 @@ export class OnlineClient {
     this.session = loadSession(); // { code, token }
     this.retry = 0;
     this.manualClose = false;
+    this.hbTimer = null;
+    this.pongTimer = null;
+    this.expectTimer = null;
+    this.lastMessageAt = 0;
   }
 
   get connected() {
@@ -21,6 +36,16 @@ export class OnlineClient {
     if (this.ready) return this.ready;
 
     this.manualClose = false;
+    // Eski soket qolgan bo'lsa yopamiz — bir vaqtda ikkita ulanish bo'lmasin
+    if (this.ws) {
+      try {
+        this.ws.onclose = null;
+        this.ws.close();
+      } catch {
+        /* e'tiborsiz */
+      }
+      this.ws = null;
+    }
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
     const url = `${proto}://${location.host}/ws`;
 
@@ -38,6 +63,7 @@ export class OnlineClient {
       ws.onopen = () => {
         this.retry = 0;
         this.on.onStatus?.('Serverga ulandi', 'ok');
+        this.startHeartbeat();
         resolve();
       };
 
@@ -56,6 +82,7 @@ export class OnlineClient {
       };
 
       ws.onclose = () => {
+        this.stopHeartbeat();
         this.ws = null;
         this.ready = null;
         this.on.onStatus?.('Aloqa uzildi', 'bad');
@@ -79,7 +106,41 @@ export class OnlineClient {
     }, delay);
   }
 
+  /** Ulanish tirikligini tekshirib turadi (yarim ochiq ulanishlarga qarshi). */
+  startHeartbeat() {
+    this.stopHeartbeat();
+    this.hbTimer = setInterval(() => {
+      if (!this.connected) return;
+      this.send({ t: 'ping' });
+      clearTimeout(this.pongTimer);
+      this.pongTimer = setTimeout(() => {
+        if (!this.connected) return;
+        this.on.onStatus?.('Aloqa tekshirilmoqda...', '');
+        try {
+          this.ws.close(); // onclose qayta ulanishni boshlaydi
+        } catch {
+          /* e'tiborsiz */
+        }
+      }, PONG_TIMEOUT);
+    }, PING_MS);
+  }
+
+  stopHeartbeat() {
+    clearInterval(this.hbTimer);
+    clearTimeout(this.pongTimer);
+    clearTimeout(this.expectTimer);
+    this.hbTimer = null;
+    this.pongTimer = null;
+    this.expectTimer = null;
+    this.lastMessageAt = 0;
+  }
+
   handle(msg) {
+    this.lastMessageAt = Date.now();
+    if (msg.t === 'pong') {
+      clearTimeout(this.pongTimer);
+      return;
+    }
     switch (msg.t) {
       case 'joined':
         this.session = { code: msg.code, token: msg.token };
@@ -109,6 +170,12 @@ export class OnlineClient {
         this.on.onLeft?.();
         break;
       case 'error':
+        if (msg.code === 'room-gone') {
+          this.clearSession();
+          this.manualClose = true;
+          this.on.onRoomGone?.(msg.msg);
+          break;
+        }
         this.on.onError?.(msg.msg);
         break;
       default:
@@ -154,8 +221,66 @@ export class OnlineClient {
     return true;
   }
 
+  /** Zar tashlash so'rovi. false qaytsa — ulanish yo'q, qayta ulanamiz. */
   roll() {
-    this.send({ t: 'roll' });
+    if (!this.send({ t: 'roll' })) {
+      this.reconnectNow();
+      return false;
+    }
+    this.expectReply();
+    return true;
+  }
+
+  /**
+   * So'rov yuborilgach javobni kutamiz. Ulanish "yarim ochiq" bo'lsa
+   * (brauzer tirik deb o'ylaydi, lekin xabarlar kelmaydi) javob kelmaydi —
+   * shunda avval sinxronlashni, keyin ulanishni yangilashni sinaymiz.
+   */
+  expectReply(ms = REPLY_TIMEOUT) {
+    clearTimeout(this.expectTimer);
+    const mark = this.lastMessageAt;
+    this.expectTimer = setTimeout(() => {
+      if (this.lastMessageAt !== mark) return; // javob keldi — hammasi joyida
+      this.on.onStatus?.('Javob kelmadi — sinxronlanmoqda...', '');
+      if (!this.send({ t: 'sync' })) return this.hardReconnect();
+      setTimeout(() => {
+        if (this.lastMessageAt === mark) this.hardReconnect();
+      }, ms);
+    }, ms);
+  }
+
+  /** Ulanishni majburan yangilaydi (yarim ochiq soketni yopib). */
+  hardReconnect() {
+    this.on.onStatus?.('Ulanish yangilanmoqda...', '');
+    try {
+      this.ws?.close();
+    } catch {
+      /* e'tiborsiz */
+    }
+    this.ws = null;
+    this.ready = null;
+    this.stopHeartbeat();
+    this.reconnectNow();
+  }
+
+  /** Serverdan xonaning joriy holatini so'raydi (desinxronizatsiyaga qarshi). */
+  sync() {
+    if (!this.session) return false;
+    if (!this.send({ t: 'sync' })) {
+      this.hardReconnect();
+      return false;
+    }
+    this.expectReply();
+    return true;
+  }
+
+  /** Darhol qayta ulanishga urinish (kutmasdan). */
+  reconnectNow() {
+    if (this.connected || this.manualClose || !this.session) return;
+    this.retry = 0;
+    this.connect()
+      .then(() => this.send({ t: 'rejoin', ...this.session }))
+      .catch(() => {});
   }
 
   chat(text) {
@@ -170,6 +295,7 @@ export class OnlineClient {
     this.send({ t: 'leave' });
     this.clearSession();
     this.manualClose = true;
+    this.stopHeartbeat();
     this.ws?.close();
   }
 

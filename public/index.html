@@ -24,6 +24,7 @@
       </span>
     </button>
     <div class="topbar-actions">
+      <button class="icon-btn" id="shopBtn" type="button" title="Do'kon">🛍</button>
       <button class="icon-btn" id="soundBtn" type="button" title="Ovoz">🔊</button>
       <button class="icon-btn" id="helpBtn" type="button" title="Qoidalar">?</button>
     </div>
@@ -48,6 +49,12 @@
           <h2>Oflayn o'yin</h2>
           <p>Bitta qurilmada 2 dan 6 kishigacha. Navbat bilan zar tashlanadi, internet shart emas.</p>
           <span class="mode-go">Boshlash →</span>
+        </button>
+        <button class="mode-card" data-goto="screen-shop" type="button">
+          <span class="mode-emoji">🛍</span>
+          <h2>Do'kon</h2>
+          <p>Fishka, narvon, ilon va taxta ko'rinishlari. Telegram Stars (⭐) orqali ochiladi.</p>
+          <span class="mode-go">Ko'rish →</span>
         </button>
       </div>
       <div class="map-preview-strip" id="menuMaps"></div>
@@ -123,6 +130,18 @@
           <p class="conn-status" id="connStatus">Ulanmagan</p>
         </div>
       </div>
+    </section>
+
+    <!-- ============ DO'KON ============ -->
+    <section class="screen" id="screen-shop">
+      <button class="back-btn" data-goto="screen-menu" type="button">← Menyu</button>
+      <div class="shop-head">
+        <h2 class="screen-title">Do'kon</h2>
+        <span class="shop-stars" id="shopStars"></span>
+      </div>
+      <p class="muted hidden" id="shopNote"></p>
+      <div class="tabs shop-tabs" id="shopTabs"></div>
+      <div class="shop-grid" id="shopBody"></div>
     </section>
 
     <!-- ============ O'YIN ============ -->
