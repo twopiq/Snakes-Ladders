@@ -833,3 +833,72 @@ a:hover { color: #7dd3fc; }
   .diag-row b { grid-column: 2; }
   .diag-row span:last-child { grid-column: 2; }
 }
+
+/* ---------- do'stlar / mukofotlar ---------- */
+.friends-top { text-align: center; }
+.friends-count b {
+  display: block;
+  font-size: 42px;
+  line-height: 1.1;
+  color: var(--gold);
+}
+.friends-count span { color: var(--muted); font-size: 13px; }
+
+.progress {
+  height: 10px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  overflow: hidden;
+  margin: 14px 0 10px;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #f472b6, #facc15);
+  transition: width .4s ease;
+}
+
+.reward-list { display: grid; gap: 10px; margin-top: 14px; }
+
+.reward {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 12px;
+  align-items: center;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px;
+}
+.reward.done { border-color: var(--accent-2); box-shadow: inset 0 0 0 1px var(--accent-2); }
+.reward-preview {
+  width: 92px;
+  height: 80px;
+  display: grid;
+  place-items: center;
+  background: var(--panel-2);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.reward-preview canvas { max-width: 100%; height: auto; }
+.reward-info { min-width: 0; }
+.reward-tier {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  color: #0b1220;
+  background: linear-gradient(90deg, #f472b6, #facc15);
+  border-radius: 999px;
+  padding: 2px 9px;
+  margin-bottom: 5px;
+}
+.reward-info b { display: block; font-size: 15px; }
+.reward-info small { display: block; color: var(--muted); font-size: 12px; line-height: 1.45; margin-top: 4px; }
+.reward-state { font-size: 20px; }
+
+.reward-btn { border-color: #7a3b57; color: #fbcfe8; }
+
+@media (max-width: 520px) {
+  .reward { grid-template-columns: auto 1fr; }
+  .reward-state { grid-column: 2; text-align: right; }
+}

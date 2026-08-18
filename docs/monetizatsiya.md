@@ -105,6 +105,39 @@ koddagi qiymatga qaytaradi.
 `npm test` katalogni tekshiradi: id takrorlanmasligi, har bo'limda aynan bitta
 bepul variant borligi va narxlar butun son ekanligi.
 
+## Do'st chaqirish mukofotlari
+
+To'rtta ko'rinish **sotilmaydi** — ularni faqat do'st chaqirib olish mumkin.
+Bu o'yinchilarni yangi odam olib kelishga undaydi (viral o'sish).
+
+| Do'stlar | Mukofot | Bo'lim |
+|---|---|---|
+| 3 | Do'stlik yuragi | Fishka |
+| 5 | Yulduzli narvon | Narvon |
+| 7 | Yulduz ilon | Ilon |
+| 10 | Do'stlar galaktikasi | Taxta |
+
+Har bir mukofot boshqa bo'limdan — shuning uchun 10 ta do'st chaqirgan o'yinchida
+to'liq "do'stlik" to'plami yig'iladi.
+
+### Qanday hisoblanadi
+
+1. O'yinchi "Do'stlar" ekranidan shaxsiy havolasini oladi:
+   `https://t.me/<bot>/<app>?startapp=r<uning_id>`
+2. Do'st shu havola orqali kiradi — server uni chaqiruvchiga bog'laydi (*kutilmoqda*).
+3. Do'st **kamida bitta o'yin boshlaganda** chaqiruv tasdiqlanadi va hisobga qo'shiladi.
+4. 3/5/7/10 ga yetganda mukofot avtomatik ochiladi va botdan xabar keladi.
+
+### Soxta hisoblarga qarshi qoidalar
+
+- o'zini o'zi chaqira olmaydi;
+- bir o'yinchi faqat bitta chaqiruvchiga bog'lanadi va faqat bir marta sanaladi;
+- allaqachon o'ynagan odamni keyin "men chaqirdim" deb yozib bo'lmaydi;
+- shunchaki havolani ochish yetarli emas — o'yin boshlanishi kerak.
+
+Mukofotlar faqat tashqi ko'rinish bo'lgani uchun aldashdan foyda kam, lekin bu
+qoidalar oddiy "havolani 10 marta ochish" usulini butunlay to'sadi.
+
 ## Sayt versiyasidan Telegram'ga yo'naltirish
 
 Stars faqat Telegram ichida ishlagani uchun sayt versiyasidagi o'yinchi uch joyda

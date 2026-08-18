@@ -9,7 +9,7 @@ import { telegramConfig, telegramEnabled, resolveIdentity, verifyInitData, botTo
 import { Store } from './store.js';
 import { createBot } from './bot.js';
 import { MAPS } from '../public/shared/maps.js';
-import { COSMETICS } from '../public/shared/cosmetics.js';
+import { COSMETICS, getItem } from '../public/shared/cosmetics.js';
 
 const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -299,6 +299,7 @@ function catalogForClient() {
     about: item.about,
     rarity: item.rarity,
     grants: item.grants || null,
+    unlock: item.unlock || null,
     style: item.style || null,
     price: shop.price(item.id),
     basePrice: item.price,
@@ -337,6 +338,12 @@ function adminOk(req) {
 }
 
 /** Do'kon so'rovlarida o'yinchini aniqlash — faqat imzolangan Telegram ma'lumoti. */
+/** startapp=r123456 ko'rinishidagi taklif parametridan chaqiruvchi id sini oladi. */
+function parseRefParam(value) {
+  const m = /^r(\d{3,20})$/.exec(String(value || '').trim());
+  return m ? m[1] : null;
+}
+
 function shopUser(body) {
   if (!telegramEnabled) return { ok: false, error: 'Do\'kon faqat Telegram ichida ishlaydi' };
   const res = verifyInitData(body.initData);
@@ -405,6 +412,10 @@ async function handleApi(req, res, url) {
   if (!who.ok) return json(res, 401, { error: who.error, reason: who.reason });
 
   if (path === '/api/shop/profile') {
+    // Taklif havolasi orqali kirgan bo'lsa (startapp=r<id>) — chaqiruvchiga bog'laymiz
+    const ref = parseRefParam(body.ref);
+    if (ref) shop.attachReferral(who.tgId, ref);
+
     const user = shop.user(who.tgId);
     return json(res, 200, {
       tgId: who.tgId,
@@ -412,8 +423,33 @@ async function handleApi(req, res, url) {
       owned: user.owned,
       equipped: user.equipped,
       starsSpent: user.starsSpent,
+      referral: shop.referralInfo(who.tgId),
       items: catalogForClient(),
       starsEnabled: Boolean(bot),
+    });
+  }
+
+  if (path === '/api/shop/played') {
+    // Mijoz o'yin boshlaganini bildiradi — shu payt taklif "tasdiqlangan" bo'ladi
+    const result = shop.markPlayed(who.tgId);
+    if (result.rewards.length && bot) {
+      const names = result.rewards.map((r) => getItem(r.itemId)?.name).filter(Boolean);
+      bot.notify(result.referrerId, [
+        '🎁 <b>Yangi ko\'rinish ochildi!</b>',
+        '',
+        `Do'stlaringiz uchun rahmat — sizga ${names.map((n) => `<b>${n}</b>`).join(', ')} berildi.`,
+        '',
+        "O'yinni ochib, do'kondan kiyib oling.",
+      ].join('\n')).catch(() => {});
+    }
+    return json(res, 200, { ok: true, referral: shop.referralInfo(who.tgId) });
+  }
+
+  if (path === '/api/shop/referral') {
+    return json(res, 200, {
+      tgId: who.tgId,
+      referral: shop.referralInfo(who.tgId),
+      link: telegramConfig().inviteBase ? `${telegramConfig().inviteBase}r${who.tgId}` : null,
     });
   }
 
@@ -423,6 +459,10 @@ async function handleApi(req, res, url) {
   }
 
   if (path === '/api/shop/invoice') {
+    const item = getItem(String(body.itemId));
+    if (!item) return json(res, 400, { error: 'Bunday ko\'rinish yo\'q' });
+    // Mukofot ko'rinishlari hech qachon sotilmaydi — faqat do'st chaqirib olinadi
+    if (item.unlock) return json(res, 400, { error: `Bu ko'rinish faqat ${item.unlock.count} ta do'st chaqirib olinadi` });
     if (!bot) return json(res, 503, { error: 'To\'lovlar hozircha yoqilmagan' });
     const result = await bot.createInvoice({ itemId: String(body.itemId), tgId: who.tgId });
     return json(res, result.ok ? 200 : 400, result);

@@ -34,6 +34,7 @@
       </span>
     </button>
     <div class="topbar-actions">
+      <button class="icon-btn" id="friendsBtn" type="button" title="Do'stlar">👥</button>
       <button class="icon-btn" id="shopBtn" type="button" title="Do'kon">🛍</button>
       <button class="icon-btn" id="soundBtn" type="button" title="Ovoz">🔊</button>
       <button class="icon-btn" id="helpBtn" type="button" title="Qoidalar">?</button>
@@ -66,6 +67,12 @@
           <h2>Do'kon</h2>
           <p>Fishka, narvon, ilon va taxta ko'rinishlari. Telegram Stars (⭐) orqali ochiladi.</p>
           <span class="mode-go">Ko'rish →</span>
+        </button>
+        <button class="mode-card" data-goto="screen-friends" type="button">
+          <span class="mode-emoji">🎁</span>
+          <h2>Do'stlarni chaqiring</h2>
+          <p>3, 5, 7 va 10 ta do'st uchun maxsus ko'rinishlar — ularni yulduz bilan sotib bo'lmaydi.</p>
+          <span class="mode-go">Mukofotlar →</span>
         </button>
       </div>
       <div class="map-preview-strip" id="menuMaps"></div>
@@ -153,6 +160,14 @@
       <p class="muted hidden" id="shopNote"></p>
       <div class="tabs shop-tabs" id="shopTabs"></div>
       <div class="shop-grid" id="shopBody"></div>
+    </section>
+
+    <!-- ============ DO'STLAR ============ -->
+    <section class="screen" id="screen-friends">
+      <button class="back-btn" data-goto="screen-menu" type="button">← Menyu</button>
+      <h2 class="screen-title">Do'stlarni chaqiring</h2>
+      <p class="muted">Bu ko'rinishlarni yulduz bilan sotib bo'lmaydi — faqat do'st chaqirib olinadi.</p>
+      <div id="friendsBody"></div>
     </section>
 
     <!-- ============ O'YIN ============ -->

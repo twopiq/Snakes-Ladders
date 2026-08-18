@@ -6,9 +6,9 @@
  * (pullik narsalar "Telegram'da ochiladi" deb ko'rsatiladi).
  */
 
-import { Board } from './board.js';
 import { SLOTS, SLOT_NAMES, RARITY, defaultEquipped, getItem } from '../shared/cosmetics.js';
-import { isTelegram, initData, openInvoice, haptic, tgConfig } from './telegram.js';
+import { drawItemPreview } from './preview.js';
+import { isTelegram, initData, openInvoice, haptic, tgConfig, refParam } from './telegram.js';
 import { canPromote, openTelegramApp, LOCK_LABEL } from './promo.js';
 import { $, toast, showModal, hideModal } from './ui.js';
 import { escapeHtml } from './game-view.js';
@@ -28,6 +28,12 @@ const state = {
 };
 
 let onChange = () => {};
+let onFriendsClick = () => {};
+
+/** Do'kondagi "do'st chaqiring" tugmasi bosilganda. */
+export function onOpenFriends(fn) {
+  onFriendsClick = fn || (() => {});
+}
 
 export function equippedNow() {
   return state.equipped;
@@ -58,7 +64,8 @@ export async function loadShop({ silent = true } = {}) {
       const res = await fetch('/api/shop/profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ initData: initData() }),
+        // ref — do'st taklifi havolasi orqali kelgan bo'lsa
+        body: JSON.stringify({ initData: initData(), ref: refParam() }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -76,7 +83,8 @@ export async function loadShop({ silent = true } = {}) {
     const data = await res.json();
     state.items = data.items;
     state.starsEnabled = data.starsEnabled;
-    state.owned = data.items.filter((i) => i.price === 0).map((i) => i.id);
+    // Mukofotlar bepul emas — ular faqat do'st chaqirib ochiladi
+    state.owned = data.items.filter((i) => i.price === 0 && !i.unlock).map((i) => i.id);
     state.equipped = loadLocalEquipped();
     state.loaded = true;
     onChange(state.equipped);
@@ -134,8 +142,11 @@ export function renderShop() {
   for (const el of root.querySelectorAll('[data-open-tg]')) {
     el.addEventListener('click', () => openTelegramApp());
   }
+  for (const el of root.querySelectorAll('[data-friends]')) {
+    el.addEventListener('click', () => onFriendsClick());
+  }
   for (const canvas of root.querySelectorAll('canvas[data-preview]')) {
-    drawPreview(canvas, canvas.dataset.preview);
+    drawItemPreview(canvas, canvas.dataset.preview);
   }
 }
 
@@ -154,7 +165,10 @@ function card(item) {
     ? `<button class="ghost tg-open" data-open-tg="1">⭐ ${item.price} · ${LOCK_LABEL}</button>`
     : `<button class="ghost" disabled title="Telegram ilovasida sotiladi">⭐ ${item.price} · Telegram'da</button>`;
 
-  if (isOwned && item.slot === 'bundle') {
+  // Mukofot ko'rinishlari sotilmaydi — faqat do'st chaqirib olinadi
+  if (item.unlock?.type === 'referral' && !isOwned) {
+    action = `<button class="ghost reward-btn" data-friends="1">🎁 ${item.unlock.count} ta do'st chaqiring</button>`;
+  } else if (isOwned && item.slot === 'bundle') {
     action = '<span class="shop-owned">Sizda bor ✓</span>';
   } else if (isEquipped) {
     action = '<span class="shop-owned">Kiyilgan ✓</span>';
@@ -180,40 +194,13 @@ function card(item) {
           : `<canvas data-preview="${item.id}"></canvas>`
       }</div>
       <div class="shop-info">
-        <b>${escapeHtml(item.name)}</b>
+        <b>${escapeHtml(item.name)}${item.unlock ? ' 🎁' : ''}</b>
         <span class="rarity" style="color:${rarity.color}">${escapeHtml(rarity.name)}</span>
         <small>${escapeHtml(item.about || '')}</small>
         ${bundleList}
       </div>
       <div class="shop-action">${action}</div>
     </div>`;
-}
-
-// ---------------------------------------------------------------- oldindan ko'rish
-
-/** Har bir kartochkadagi kichik namuna — o'yindagi chizuvchi bilan bir xil. */
-function drawPreview(canvas, itemId) {
-  const item = getItem(itemId);
-  if (!item) return;
-  const slot = item.slot;
-
-  const theme = { light: '#f8fafc', dark: '#e2e8f0', accent: '#94a3b8', grid: '#cbd5e1' };
-  const map = {
-    id: 'preview', name: 'preview',
-    cols: slot === 'token' ? 2 : 3,
-    rows: slot === 'token' ? 2 : 3,
-    ladders: slot === 'ladder' ? { 2: 8 } : slot === 'board' ? { 2: 8 } : {},
-    snakes: slot === 'snake' ? { 8: 2 } : {},
-    bonus: [], traps: [], theme,
-  };
-
-  const board = new Board(canvas, map);
-  board.showLabels = slot === 'board'; // taxta mavzusida raqam ham ko'rinsin
-  board.setSkins({ ...defaultEquipped(), [slot]: itemId });
-  board.setPlayers(slot === 'token'
-    ? [{ id: 'p', name: 'A', hex: '#ef4444', pos: 1, finished: false },
-       { id: 'q', name: 'B', hex: '#3b82f6', pos: 4, finished: false }]
-    : []);
 }
 
 // ---------------------------------------------------------------- amallar

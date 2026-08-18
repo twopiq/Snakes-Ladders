@@ -7,6 +7,7 @@ Qo'lda chizilgan "Ilonlar va Narvonlar" stol o'yinining elektron ko'rinishi.
 - **Oflayn** — bitta qurilmada 2 dan 6 kishigacha, navbat bilan.
 - **5 ta katta xarita** — 120 dan 196 katakkacha.
 - **Do'kon** — fishka, narvon, ilon va taxta ko'rinishlari; Telegram Stars (⭐) orqali ([sozlash](docs/monetizatsiya.md)).
+- **Do'st chaqirish mukofotlari** — 3, 5, 7, 10 ta do'st uchun sotilmaydigan maxsus ko'rinishlar.
 - Brauzerda ishlaydi, telefon va kompyuterga moslashadi. Ovoz effektlari, chat, o'yin jurnali.
 
 ## Ishga tushirish
@@ -117,6 +118,8 @@ public/
     telegram.js  Telegram Mini App integratsiyasi
     shop.js      Do'kon: ko'rinishlar, Stars xaridlari
     promo.js     Saytdan Telegram ilovasiga yo'naltirish
+    friends.js   Do'st chaqirish ekrani va mukofotlar
+    preview.js   Do'kon/mukofot namunalari
     admin.js     Admin paneli (narxlar, xaridlar, qaytarish)
     sound.js     Ovoz effektlari
     ui.js        DOM yordamchilari

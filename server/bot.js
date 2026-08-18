@@ -30,17 +30,19 @@ export function createBot({ token, store, webappUrl = '' }) {
     return data.result;
   }
 
-  const playButton = (text, startParam = '') => ({
-    inline_keyboard: [[{
-      text,
-      web_app: { url: startParam ? `${webappUrl}/?room=${encodeURIComponent(startParam)}` : webappUrl },
-    }]],
-  });
+  const playButton = (text, startParam = '') => {
+    // r<id> — taklif, aks holda xona kodi
+    const query = !startParam ? ''
+      : /^r\d{3,20}$/.test(startParam) ? `?ref=${encodeURIComponent(startParam)}`
+      : `?room=${encodeURIComponent(startParam)}`;
+    return { inline_keyboard: [[{ text, web_app: { url: `${webappUrl}/${query}` } }]] };
+  };
 
   /** Do'kondagi narsa uchun to'lov havolasi (Telegram Stars). */
   async function createInvoice({ itemId, tgId }) {
     const item = getItem(itemId);
     if (!item) return { ok: false, error: 'Bunday ko\'rinish yo\'q' };
+    if (item.unlock) return { ok: false, error: `Bu ko'rinish faqat ${item.unlock.count} ta do'st chaqirib olinadi` };
     if (item.price === 0) return { ok: false, error: 'Bu ko\'rinish bepul' };
     if (store.isDisabled(itemId)) return { ok: false, error: 'Bu ko\'rinish hozircha sotuvda emas' };
     if (store.owns(tgId, itemId)) return { ok: false, error: 'Bu sizda allaqachon bor' };
@@ -62,6 +64,17 @@ export function createBot({ token, store, webappUrl = '' }) {
       console.error('invoice xatosi:', err.message);
       return { ok: false, error: 'To\'lov havolasini yasab bo\'lmadi' };
     }
+  }
+
+  /** O'yinchiga oddiy xabar yuborish (masalan mukofot haqida). */
+  async function notify(tgId, html) {
+    if (!tgId) return;
+    await call('sendMessage', {
+      chat_id: Number(tgId),
+      text: html,
+      parse_mode: 'HTML',
+      reply_markup: playButton("🎮 O'yinni ochish"),
+    });
   }
 
   /** Yulduzlarni qaytarish (admin panelidan). */
@@ -114,7 +127,8 @@ export function createBot({ token, store, webappUrl = '' }) {
 
     if (text.startsWith('/start')) {
       const param = text.split(/\s+/)[1] || '';
-      const code = /^[A-Z0-9]{4}$/i.test(param) ? param.toUpperCase() : '';
+      const isRef = /^r\d{3,20}$/.test(param);
+      const code = !isRef && /^[A-Z0-9]{4}$/i.test(param) ? param.toUpperCase() : '';
       await call('sendMessage', {
         chat_id: chatId,
         parse_mode: 'HTML',
@@ -127,9 +141,11 @@ export function createBot({ token, store, webappUrl = '' }) {
           '• <b>Oflayn</b> — bitta telefonda 2-6 kishi',
           "• Do'konda fishka, narvon, ilon va taxta ko'rinishlari",
           '',
-          code ? `🎟 Xona kodi: <code>${code}</code>` : "Pastdagi tugmani bosing va o'ynang!",
+          code ? `🎟 Xona kodi: <code>${code}</code>`
+            : isRef ? "Sizni do'stingiz chaqirdi — o'ynasangiz unga mukofot ochiladi 🎁"
+            : "Pastdagi tugmani bosing va o'ynang!",
         ].join('\n'),
-        reply_markup: playButton(code ? `🎮 ${code} xonasiga kirish` : "🎮 O'ynash", code),
+        reply_markup: playButton(code ? `🎮 ${code} xonasiga kirish` : "🎮 O'ynash", code || param),
       }).catch(() => {});
       return;
     }
@@ -258,7 +274,7 @@ export function createBot({ token, store, webappUrl = '' }) {
     poll();
   }
 
-  const api = { start, stop: () => { running = false; }, createInvoice, refund, call, info: null };
+  const api = { start, stop: () => { running = false; }, createInvoice, refund, notify, call, info: null };
   return api;
 }
 

@@ -11,7 +11,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { getItem, grantsOf, freeItems, defaultEquipped, SLOTS } from '../public/shared/cosmetics.js';
+import { getItem, grantsOf, freeItems, defaultEquipped, SLOTS, REFERRAL_TIERS } from '../public/shared/cosmetics.js';
 
 const DATA_DIR = process.env.DATA_DIR || path.resolve(process.cwd(), 'data');
 const FILE = path.join(DATA_DIR, 'store.json');
@@ -114,6 +114,11 @@ export class Store {
         equipped: defaultEquipped(),
         starsSpent: 0,
         firstSeen: new Date().toISOString(),
+        played: false,        // kamida bitta o'yin o'ynadimi
+        invitedBy: null,      // kim chaqirgan
+        invitedConfirmed: 0,  // nechta do'st haqiqatan o'ynay boshladi
+        invitedPending: 0,    // ochgan, lekin hali o'ynamagan
+        rewardsGiven: [],     // qaysi darajalar berilgan
       };
       this.saveSoon();
     }
@@ -121,6 +126,89 @@ export class Store {
     // Bepul narsalar har doim ochiq bo'lsin (katalog kengaysa ham)
     for (const free of freeItems()) if (!u.owned.includes(free)) u.owned.push(free);
     return u;
+  }
+
+  // ---------------------------------------------------------------- do'st chaqirish
+
+  /**
+   * Yangi o'yinchini chaqiruvchiga bog'laydi.
+   *
+   * Qoidalar (soxta hisoblarga qarshi):
+   *   - o'zini o'zi chaqira olmaydi;
+   *   - allaqachon chaqirilgan bo'lsa qayta bog'lanmaydi;
+   *   - o'yin o'ynab bo'lgan odamni keyin "chaqirdim" deb yozib bo'lmaydi;
+   *   - hisobga faqat haqiqatan o'ynay boshlagan do'st qo'shiladi (markPlayed).
+   */
+  attachReferral(tgId, referrerId) {
+    const id = String(tgId);
+    const ref = String(referrerId);
+    if (!ref || id === ref) return { ok: false, error: 'self' };
+
+    const user = this.user(id);
+    if (user.invitedBy) return { ok: false, error: 'already' };
+    if (user.played) return { ok: false, error: 'too-late' };
+
+    user.invitedBy = ref;
+    const referrer = this.user(ref);
+    referrer.invitedPending = (referrer.invitedPending || 0) + 1;
+    this.saveSoon();
+    return { ok: true };
+  }
+
+  /**
+   * O'yinchi o'yin boshladi. Agar uni kimdir chaqirgan bo'lsa — o'sha chaqiruv
+   * tasdiqlanadi va chaqiruvchiga mukofot tekshiriladi.
+   * Qaytadi: chaqiruvchiga berilgan yangi mukofotlar ro'yxati.
+   */
+  markPlayed(tgId) {
+    const user = this.user(tgId);
+    if (user.played) return { confirmed: false, rewards: [], referrerId: null };
+    user.played = true;
+
+    if (!user.invitedBy) {
+      this.saveNow();
+      return { confirmed: false, rewards: [], referrerId: null };
+    }
+
+    const referrer = this.user(user.invitedBy);
+    referrer.invitedConfirmed = (referrer.invitedConfirmed || 0) + 1;
+    referrer.invitedPending = Math.max(0, (referrer.invitedPending || 0) - 1);
+
+    const rewards = this.checkRewards(user.invitedBy);
+    this.saveNow();
+    return { confirmed: true, rewards, referrerId: user.invitedBy };
+  }
+
+  /** Yig'ilgan do'stlar soniga qarab ochilishi kerak bo'lgan mukofotlarni beradi. */
+  checkRewards(tgId) {
+    const user = this.user(tgId);
+    const given = [];
+    for (const tier of REFERRAL_TIERS) {
+      if ((user.invitedConfirmed || 0) < tier.count) continue;
+      if (user.rewardsGiven.includes(tier.count)) continue;
+      user.rewardsGiven.push(tier.count);
+      this.grant(tgId, tier.itemId);
+      given.push(tier);
+    }
+    if (given.length) this.saveSoon();
+    return given;
+  }
+
+  /** "Do'stlar" ekrani uchun ma'lumot. */
+  referralInfo(tgId) {
+    const user = this.user(tgId);
+    const confirmed = user.invitedConfirmed || 0;
+    const next = REFERRAL_TIERS.find((t) => confirmed < t.count) || null;
+    return {
+      confirmed,
+      pending: user.invitedPending || 0,
+      rewards: REFERRAL_TIERS.map((tier) => ({
+        count: tier.count,
+        itemId: tier.itemId,
+        unlocked: user.owned.includes(tier.itemId),
+      })),
+      next: next ? { count: next.count, itemId: next.itemId, left: next.count - confirmed } : null,
+    };
   }
 
   owns(tgId, itemId) {
@@ -205,8 +293,11 @@ export class Store {
       byItem[p.itemId].count++;
       byItem[p.itemId].stars += p.stars;
     }
+    const users = Object.values(this.data.users);
     return {
-      users: Object.keys(this.data.users).length,
+      users: users.length,
+      played: users.filter((u) => u.played).length,
+      invited: users.filter((u) => u.invitedBy).length,
       purchases: active.length,
       refunds: this.data.purchases.length - active.length,
       starsTotal: active.reduce((s, p) => s + p.stars, 0),

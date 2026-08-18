@@ -82,13 +82,26 @@ export function initData() {
   return sdk()?.initData || '';
 }
 
-/** Havoladan kelgan xona kodi: t.me/bot/app?startapp=KOD (yoki saytda ?room=KOD). */
-export function startParam() {
+/** Havolada kelgan xom parametr: startapp=... (yoki saytda ?room=/?ref=). */
+export function rawStartParam() {
   const fromTg = sdk()?.initDataUnsafe?.start_param;
-  if (fromTg) return String(fromTg).toUpperCase().slice(0, 8);
+  if (fromTg) return String(fromTg).slice(0, 24);
   const url = new URLSearchParams(location.search);
-  const code = url.get('room') || url.get('tgWebAppStartParam');
-  return code ? code.toUpperCase().slice(0, 8) : null;
+  const value = url.get('room') || url.get('ref') || url.get('tgWebAppStartParam');
+  return value ? String(value).slice(0, 24) : null;
+}
+
+/** Xona kodi (4 ta belgi). Taklif havolasi bo'lsa — null. */
+export function startParam() {
+  const raw = rawStartParam();
+  if (!raw || /^r\d{3,20}$/i.test(raw)) return null;
+  return raw.toUpperCase().slice(0, 8);
+}
+
+/** Do'st taklifi: startapp=r<chaqiruvchi_id>. */
+export function refParam() {
+  const raw = rawStartParam();
+  return raw && /^r\d{3,20}$/i.test(raw) ? raw.toLowerCase() : null;
 }
 
 /** Xona uchun ulashsa bo'ladigan havola. */

@@ -4,7 +4,8 @@ import { MAPS, getMap, mapSize } from '../shared/maps.js';
 import { createGame, applyRoll, rollDice, DEFAULT_RULES, PLAYER_COLORS, MIN_PLAYERS, MAX_PLAYERS } from '../shared/engine.js';
 import { GameView, escapeHtml } from './game-view.js';
 import { OnlineClient } from './online.js';
-import { loadShop, renderShop, equippedNow, onEquipChange } from './shop.js';
+import { loadShop, renderShop, equippedNow, onEquipChange, onOpenFriends } from './shop.js';
+import { loadFriends, renderFriends, reportPlayed } from './friends.js';
 import { renderMenuPromo, openTelegramApp, canPromote, telegramAppLink } from './promo.js';
 import { sound } from './sound.js';
 import {
@@ -43,7 +44,15 @@ const S = {
 /** Ekranni almashtiradi va Telegram'ning "orqaga" tugmasini moslaydi. */
 function goto(screenId) {
   showScreen(screenId);
-  if (screenId === 'screen-shop') renderShop();
+  if (screenId === 'screen-shop') {
+    renderShop();
+    // Do'st chaqirish mukofoti ochilgan bo'lishi mumkin — ro'yxatni yangilaymiz
+    loadShop().then(renderShop);
+  }
+  if (screenId === 'screen-friends') {
+    renderFriends();
+    loadFriends().then(renderFriends);
+  }
   showBackButton(screenId !== 'screen-menu');
   if (screenId !== 'screen-game') setMainButton({ show: false });
 }
@@ -185,6 +194,8 @@ async function init() {
   nameInput.addEventListener('change', () => localStorage.setItem('il_name', nameInput.value.trim()));
 
   $('#shopBtn').addEventListener('click', () => goto('screen-shop'));
+  $('#friendsBtn').addEventListener('click', () => goto('screen-friends'));
+  onOpenFriends(() => goto('screen-friends'));
   $('#helpBtn').addEventListener('click', showHelp);
   const soundBtn = $('#soundBtn');
   soundBtn.classList.toggle('off', !sound.enabled);
@@ -209,6 +220,7 @@ async function init() {
   loadShop().then(() => {
     if ($('#screen-shop').classList.contains('active')) renderShop();
   });
+  loadFriends();
 
   if (isTelegram()) {
     const name = tgUserName();
@@ -221,7 +233,7 @@ async function init() {
   }
 
   // Taklif havolasi orqali kirilgan bo'lsa — to'g'ridan-to'g'ri xonaga
-  const invited = startParam();
+  const invited = startParam(); // taklif havolasi bo'lsa null qaytadi
   if (invited && invited.length === 4) {
     net.clearSession();
     S.mode = 'online';
@@ -331,6 +343,7 @@ function startOffline() {
   setClosingConfirmation(true);
   view.open({ state: S.state, mode: 'offline' });
   applySkins();
+  reportPlayed();
 }
 
 function offlineRoll() {
@@ -403,6 +416,7 @@ function applyRoom(room) {
     setClosingConfirmation(true);
     view.open({ state: room.state, mode: 'online', mySeat: S.online.mySeat, roomCode: room.code });
     applySkins();
+    reportPlayed();
     for (const msg of room.chat || []) {
       view.addChat({ from: msg.from, text: msg.text, mine: msg.seat === S.online.mySeat });
     }

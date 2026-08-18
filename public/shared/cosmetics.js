@@ -26,7 +26,19 @@ export const RARITY = {
   oddiy: { name: 'Oddiy', color: '#38bdf8' },
   nodir: { name: 'Nodir', color: '#a855f7' },
   afsonaviy: { name: 'Afsonaviy', color: '#f59e0b' },
+  dostlik: { name: "Do'stlik", color: '#f472b6' },
 };
+
+/**
+ * Do'st chaqirish uchun mukofotlar.
+ * Bu ko'rinishlarni yulduz bilan sotib bo'lmaydi — faqat do'st chaqirib olinadi.
+ */
+export const REFERRAL_TIERS = [
+  { count: 3, itemId: 'token-dostlik' },
+  { count: 5, itemId: 'ladder-yulduz' },
+  { count: 7, itemId: 'snake-yulduz' },
+  { count: 10, itemId: 'board-dostlar' },
+];
 
 export const COSMETICS = [
   // ---------------------------------------------------------------- FISHKALAR
@@ -56,6 +68,13 @@ export const COSMETICS = [
     style: { shape: 'crown', metallic: true, glow: true },
   },
 
+  {
+    id: 'token-dostlik', slot: 'token', name: "Do'stlik yuragi", rarity: 'dostlik', price: 0,
+    unlock: { type: 'referral', count: 3 },
+    about: "3 ta do'st chaqirganingiz uchun. Yurak shaklidagi, yulduzcha bilan yaltiraydigan dona.",
+    style: { shape: 'heart', glow: true, sparkle: true },
+  },
+
   // ---------------------------------------------------------------- NARVONLAR
   {
     id: 'ladder-wood', slot: 'ladder', name: 'Yog\'och narvon', rarity: 'free', price: 0,
@@ -78,6 +97,13 @@ export const COSMETICS = [
     style: { kind: 'gold', rail: ['#b45309', '#fde68a'], rung: 'rgba(146,64,14,.95)', metallic: true, glow: true },
   },
 
+  {
+    id: 'ladder-yulduz', slot: 'ladder', name: 'Yulduzli narvon', rarity: 'dostlik', price: 0,
+    unlock: { type: 'referral', count: 5 },
+    about: "5 ta do'st uchun. Pog'onalari yulduzchalardan yasalgan, tunda yonadi.",
+    style: { kind: 'star', rail: ['#7c3aed', '#f9a8d4'], rung: 'rgba(250,204,21,.95)', stars: true, glow: true },
+  },
+
   // ---------------------------------------------------------------- ILONLAR
   {
     id: 'snake-classic', slot: 'snake', name: 'Oddiy ilon', rarity: 'free', price: 0,
@@ -98,6 +124,13 @@ export const COSMETICS = [
     id: 'snake-dragon', slot: 'snake', name: 'Ajdaho', rarity: 'afsonaviy', price: 150,
     about: 'Qirrali tikanlari va olovli nafasi bor ajdaho.',
     style: { kind: 'dragon', hue: 12, spikes: true, glow: true },
+  },
+
+  {
+    id: 'snake-yulduz', slot: 'snake', name: 'Yulduz ilon', rarity: 'dostlik', price: 0,
+    unlock: { type: 'referral', count: 7 },
+    about: "7 ta do'st uchun. Gavdasi yulduzlar bilan qoplangan koinot iloni.",
+    style: { kind: 'star', hue: 275, starPattern: true, glow: true },
   },
 
   // ---------------------------------------------------------------- TAXTALAR
@@ -127,6 +160,16 @@ export const COSMETICS = [
     style: { light: '#2a2416', dark: '#1a160d', accent: '#f5c518', grid: '#5c4a1a', number: 'rgba(253,230,138,.9)', dark_ui: true },
   },
 
+  {
+    id: 'board-dostlar', slot: 'board', name: "Do'stlar galaktikasi", rarity: 'dostlik', price: 0,
+    unlock: { type: 'referral', count: 10 },
+    about: "10 ta do'st uchun — eng nodir taxta. Yulduzli osmon ustida o'ynaysiz.",
+    style: {
+      light: '#241b3d', dark: '#170f2b', accent: '#f472b6', grid: '#4c3a75',
+      number: 'rgba(244,231,255,.9)', dark_ui: true, sparkle: true,
+    },
+  },
+
   // ---------------------------------------------------------------- TO'PLAMLAR
   {
     id: 'bundle-afsona', slot: 'bundle', name: 'Afsonaviy to\'plam', rarity: 'afsonaviy', price: 420,
@@ -150,9 +193,19 @@ export function itemsBySlot(slot) {
   return COSMETICS.filter((c) => c.slot === slot);
 }
 
-/** Sotib olish shart bo'lmagan (bepul) ko'rinishlar. */
+/** Boshidanoq ochiq bo'lgan ko'rinishlar (mukofotlar bunga kirmaydi). */
 export function freeItems() {
-  return COSMETICS.filter((c) => c.price === 0).map((c) => c.id);
+  return COSMETICS.filter((c) => c.price === 0 && !c.unlock).map((c) => c.id);
+}
+
+/** Do'st chaqirish mukofotlari (tartib bilan). */
+export function referralRewards() {
+  return REFERRAL_TIERS.map((tier) => ({ ...tier, item: getItem(tier.itemId) }));
+}
+
+/** Shu ko'rinish faqat mukofot sifatida olinadimi? */
+export function isReward(id) {
+  return Boolean(getItem(id)?.unlock);
 }
 
 /** Yangi o'yinchining sukut bo'yicha kiyimi. */
@@ -191,14 +244,30 @@ export function validateCatalog() {
     if (!item.name) errors.push(`${item.id}: nom yo'q`);
     if (!SLOTS.includes(item.slot) && item.slot !== 'bundle') errors.push(`${item.id}: noma'lum slot ${item.slot}`);
     if (!Number.isInteger(item.price) || item.price < 0) errors.push(`${item.id}: narx butun son bo'lishi kerak`);
+    if (item.unlock) {
+      if (item.price !== 0) errors.push(`${item.id}: mukofot ko'rinishi sotilmaydi, narxi 0 bo'lishi kerak`);
+      if (item.unlock.type !== 'referral') errors.push(`${item.id}: noma'lum ochilish turi`);
+      if (!Number.isInteger(item.unlock.count) || item.unlock.count < 1) errors.push(`${item.id}: mukofot sharti noto'g'ri`);
+    }
     if (!RARITY[item.rarity]) errors.push(`${item.id}: noma'lum nodirlik ${item.rarity}`);
     for (const g of item.grants || []) {
       if (!BY_ID.has(g)) errors.push(`${item.id}: to'plamdagi ${g} topilmadi`);
     }
   }
   for (const slot of SLOTS) {
-    const free = itemsBySlot(slot).filter((c) => c.price === 0);
-    if (free.length !== 1) errors.push(`${slot}: aynan bitta bepul variant bo'lishi kerak (hozir ${free.length})`);
+    const free = itemsBySlot(slot).filter((c) => c.price === 0 && !c.unlock);
+    if (free.length !== 1) errors.push(`${slot}: aynan bitta boshlang'ich variant bo'lishi kerak (hozir ${free.length})`);
+  }
+  // Har bir mukofot darajasi mavjud ko'rinishga ishora qilsin
+  const counts = new Set();
+  for (const tier of REFERRAL_TIERS) {
+    if (!BY_ID.has(tier.itemId)) errors.push(`mukofot ${tier.count}: ${tier.itemId} topilmadi`);
+    if (counts.has(tier.count)) errors.push(`mukofot darajasi takrorlangan: ${tier.count}`);
+    counts.add(tier.count);
+    const item = BY_ID.get(tier.itemId);
+    if (item && item.unlock?.count !== tier.count) {
+      errors.push(`${tier.itemId}: unlock.count (${item.unlock?.count}) daraja (${tier.count}) bilan mos emas`);
+    }
   }
   return errors;
 }

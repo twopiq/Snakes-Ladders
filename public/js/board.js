@@ -197,6 +197,28 @@ export class Board {
       ctx.lineWidth = 0.6;
       ctx.strokeRect(r.x + 0.3, r.y + 0.3, r.w - 0.6, r.h - 0.6);
     }
+
+    // "Do'stlar galaktikasi" kabi mavzularda yulduzli fon
+    if (this.skins?.board?.sparkle) this.drawStarField();
+  }
+
+  /** Taxta ustidagi mayda yulduzchalar (mavzu talab qilsa). */
+  drawStarField() {
+    const ctx = this.ctx;
+    const W = this.cell * this.map.cols + this.pad * 2;
+    const H = this.cell * this.map.rows + this.pad * 2;
+    ctx.save();
+    for (let i = 0; i < 90; i++) {
+      // Doimiy joylashuv: tasodifiy emas, formula bo'yicha (har chizishda bir xil)
+      const x = ((i * 73) % 101) / 100 * W;
+      const y = ((i * 149) % 97) / 97 * H;
+      const r = 0.6 + ((i * 37) % 5) * 0.35;
+      ctx.fillStyle = i % 7 === 0 ? 'rgba(244,114,182,.75)' : 'rgba(226,232,240,.55)';
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, TAU);
+      ctx.fill();
+    }
+    ctx.restore();
   }
 
   /**
@@ -298,6 +320,14 @@ export class Board {
       ctx.moveTo(px + nx * w, py + ny * w);
       ctx.lineTo(px - nx * w, py - ny * w);
       ctx.stroke();
+    }
+
+    // yulduzli narvon: pog'onalar o'rniga yulduzchalar
+    if (style.stars) {
+      for (let i = 1; i < rungs; i++) {
+        const t = i / rungs;
+        star(ctx, a.x + dx * t, a.y + dy * t, Math.max(3, this.cell * 0.13), '#FACC15');
+      }
     }
 
     // yon tayanchlar
@@ -462,6 +492,11 @@ export class Board {
         ctx.lineTo(right[i].x, right[i].y);
         ctx.stroke();
       }
+    } else if (style.starPattern) {
+      for (let i = 3; i < steps - 2; i += 4) {
+        const p = spine[i];
+        star(ctx, p.x, p.y, Math.max(2, p.w * 0.75), 'rgba(255,255,255,.9)');
+      }
     } else if (style.kind === 'electric') {
       ctx.strokeStyle = 'rgba(255,255,255,.85)';
       ctx.lineWidth = Math.max(1, headW * 0.3);
@@ -617,6 +652,19 @@ export class Board {
         }
         break;
       }
+      case 'heart': {
+        const w = r * 1.15;
+        const h = r * 1.1;
+        ctx.beginPath();
+        ctx.moveTo(x, y + h * 0.85);
+        ctx.bezierCurveTo(x - w * 1.25, y - h * 0.25, x - w * 0.45, y - h * 1.2, x, y - h * 0.35);
+        ctx.bezierCurveTo(x + w * 0.45, y - h * 1.2, x + w * 1.25, y - h * 0.25, x, y + h * 0.85);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        if (style.sparkle) star(ctx, x + r * 0.45, y - r * 0.45, r * 0.35, 'rgba(255,255,255,.95)');
+        break;
+      }
       case 'star': {
         ctx.beginPath();
         for (let i = 0; i < 10; i++) {
@@ -666,7 +714,7 @@ export class Board {
     ctx.shadowBlur = 0;
 
     // bosh harflar
-    if (style.shape !== 'crown') {
+    if (style.shape !== 'crown' && style.shape !== 'heart') {
       ctx.fillStyle = '#fff';
       ctx.font = `bold ${Math.round(r * 1.05)}px system-ui, sans-serif`;
       ctx.textAlign = 'center';
@@ -772,6 +820,24 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.arcTo(x, y + h, x, y, r);
   ctx.arcTo(x, y, x + w, y, r);
   ctx.closePath();
+}
+
+/** Kichik besh qirrali yulduz. */
+function star(ctx, cx, cy, r, color) {
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const rad = i % 2 === 0 ? r : r * 0.42;
+    const ang = (i / 10) * TAU - Math.PI / 2;
+    const px = cx + Math.cos(ang) * rad;
+    const py = cy + Math.sin(ang) * rad;
+    if (i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
 }
 
 function easeOutQuad(t) {
