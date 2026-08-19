@@ -219,3 +219,54 @@ test('admin sahifasi /admin manzilida ochiladi', async (t) => {
   assert.equal(res.status, 200);
   assert.match(await res.text(), /Do'kon boshqaruvi/);
 });
+
+// ---------------------------------------------------------------- to'plamlar
+
+test('to\'plam bitta amalda butunlay kiyiladi', () => {
+  const s = tmpStore();
+  s.grant('u1', 'bundle-afsona');
+  const res = s.equipSet('u1', 'bundle-afsona');
+  assert.equal(res.ok, true);
+  for (const id of getItem('bundle-afsona').grants) {
+    const part = getItem(id);
+    assert.equal(res.equipped[part.slot], id, `${id} kiyilishi kerak`);
+  }
+  // To'plamning o'zi hech qaysi bo'limga kiyilmaydi
+  assert.ok(!Object.values(res.equipped).includes('bundle-afsona'));
+});
+
+test('to\'plamning faqat egalik qilingan qismlari kiyiladi', () => {
+  const s = tmpStore();
+  const u = s.user('u2');
+  u.owned.push('token-crown'); // to'plamdan faqat bittasi bor
+  const res = s.equipSet('u2', 'bundle-afsona');
+  assert.equal(res.ok, true);
+  assert.deepEqual(res.worn, ['token-crown']);
+  assert.equal(res.equipped.ladder, 'ladder-wood', 'olinmagani boshlang\'ichcha qoladi');
+});
+
+test('hech narsasi yo\'q to\'plam kiyilmaydi', () => {
+  const s = tmpStore();
+  assert.equal(s.equipSet('u3', 'bundle-afsona').ok, false);
+  assert.equal(s.equipSet('u3', 'yoq-bunday').ok, false);
+});
+
+test('API: to\'plam bitta so\'rov bilan kiyiladi', async (t) => {
+  await startServer();
+  t.after(() => server.kill());
+
+  const initData = makeInitData({ user: { id: 8080, first_name: 'Bek' } });
+  await post('/api/shop/profile', { initData });
+  await post('/api/admin/grant', { tgId: '8080', itemId: 'bundle-boshlash' }, { 'x-admin-key': ADMIN_KEY });
+
+  // slot berilmasa — to'plam sifatida qabul qilinadi
+  const res = await post('/api/shop/equip', { initData, itemId: 'bundle-boshlash' });
+  assert.equal(res.status, 200);
+  const data = await res.json();
+  assert.equal(data.equipped.token, 'token-ring');
+  assert.equal(data.equipped.board, 'board-papirus');
+
+  // Qayta kirganda ham saqlanib qoladi
+  const profile = await (await post('/api/shop/profile', { initData })).json();
+  assert.equal(profile.equipped.snake, 'snake-candy');
+});

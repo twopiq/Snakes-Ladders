@@ -550,7 +550,11 @@ async function handleApi(req, res, url) {
   }
 
   if (path === '/api/shop/equip') {
-    const result = shop.equip(who.tgId, String(body.slot), String(body.itemId));
+    const item = getItem(String(body.itemId));
+    // To'plam berilsa — ichidagi hamma narsa o'z bo'limiga kiyiladi
+    const result = item?.slot === 'bundle' || !body.slot
+      ? shop.equipSet(who.tgId, String(body.itemId))
+      : shop.equip(who.tgId, String(body.slot), String(body.itemId));
     return json(res, result.ok ? 200 : 400, result);
   }
 

@@ -35,6 +35,7 @@
     </button>
     <div class="topbar-actions">
       <button class="icon-btn" id="friendsBtn" type="button" title="Do'stlar">👥</button>
+      <button class="icon-btn" id="mineBtn" type="button" title="Mening ko'rinishlarim">🎨</button>
       <button class="icon-btn" id="shopBtn" type="button" title="Do'kon">🛍</button>
       <button class="icon-btn" id="soundBtn" type="button" title="Ovoz">🔊</button>
       <button class="icon-btn" id="helpBtn" type="button" title="Qoidalar">?</button>
@@ -67,6 +68,12 @@
           <h2>Do'kon</h2>
           <p>Fishka, narvon, ilon va taxta ko'rinishlari. Telegram Stars (⭐) orqali ochiladi.</p>
           <span class="mode-go">Ko'rish →</span>
+        </button>
+        <button class="mode-card" data-goto="screen-wardrobe" type="button">
+          <span class="mode-emoji">🎨</span>
+          <h2>Mening ko'rinishlarim</h2>
+          <p>Ochilgan fishka, narvon, ilon va taxtalar. Bir bosishda kiyiladi va o'yinda darhol ko'rinadi.</p>
+          <span class="mode-go">Ochish →</span>
         </button>
         <button class="mode-card" data-goto="screen-friends" type="button">
           <span class="mode-emoji">🎁</span>
@@ -169,6 +176,14 @@
       <p class="muted hidden" id="shopNote"></p>
       <div class="tabs shop-tabs" id="shopTabs"></div>
       <div class="shop-grid" id="shopBody"></div>
+    </section>
+
+    <!-- ============ MENING KO'RINISHLARIM ============ -->
+    <section class="screen" id="screen-wardrobe">
+      <button class="back-btn" data-goto="screen-menu" type="button">← Menyu</button>
+      <h2 class="screen-title">Mening ko'rinishlarim</h2>
+      <p class="muted">Kiyilgan ko'rinish o'yinda darhol qo'llanadi — taxtada ham, fishkangizda ham.</p>
+      <div id="wardrobeBody"></div>
     </section>
 
     <!-- ============ DO'STLAR ============ -->

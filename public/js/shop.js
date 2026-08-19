@@ -39,6 +39,11 @@ export function equippedNow() {
   return state.equipped;
 }
 
+/** Do'kon holati (katalog, ochilganlar, kiyilganlar) — "Mening ko'rinishlarim" uchun. */
+export function shopState() {
+  return state;
+}
+
 /** Ko'rinish o'zgarganda taxtani yangilash uchun. */
 export function onEquipChange(fn) {
   onChange = fn || (() => {});
@@ -140,6 +145,9 @@ export function renderShop() {
   for (const el of root.querySelectorAll('[data-equip]')) {
     el.addEventListener('click', () => equip(el.dataset.slot, el.dataset.equip));
   }
+  for (const el of root.querySelectorAll('[data-equip-set]')) {
+    el.addEventListener('click', () => equipSet(el.dataset.equipSet));
+  }
   for (const el of root.querySelectorAll('[data-open-tg]')) {
     el.addEventListener('click', () => openTelegramApp());
   }
@@ -153,6 +161,47 @@ export function renderShop() {
 
 function owns(id) {
   return state.owned.includes(id);
+}
+
+/** To'plam ichidagi hamma narsa hozir kiyilganmi? */
+function allWorn(item) {
+  const parts = (item.grants || []).map((id) => getItem(id)).filter((x) => x && x.slot !== 'bundle');
+  return parts.length > 0 && parts.every((x) => state.equipped[x.slot] === x.id);
+}
+
+/**
+ * To'plamni butunlay kiyadi.
+ * Sotib olingan to'plam o'z-o'zidan ishlashi kerak — o'yinchi to'rtta bo'limni
+ * aylanib chiqib, har birini alohida kiyishi shart emas.
+ */
+export async function equipSet(itemId) {
+  const item = state.items.find((i) => i.id === itemId) || getItem(itemId);
+  const parts = (item?.grants || []).map((id) => getItem(id)).filter((x) => x && x.slot !== 'bundle');
+  if (!parts.length) return;
+
+  for (const part of parts) if (owns(part.id)) state.equipped[part.slot] = part.id;
+  haptic('light');
+
+  if (isTelegram() && initData()) {
+    try {
+      const res = await fetch('/api/shop/equip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initData: initData(), itemId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      state.equipped = { ...defaultEquipped(), ...data.equipped };
+    } catch (err) {
+      toast(err.message || "Kiyib bo'lmadi", 'bad');
+    }
+  } else {
+    saveLocalEquipped();
+  }
+
+  onChange(state.equipped);
+  renderShop();
+  toast(`${item?.name || "To'plam"} kiyildi`);
 }
 
 function card(item) {
@@ -170,7 +219,9 @@ function card(item) {
   if (item.unlock?.type === 'referral' && !isOwned) {
     action = `<button class="ghost reward-btn" data-friends="1">🎁 ${item.unlock.count} ta do'st chaqiring</button>`;
   } else if (isOwned && item.slot === 'bundle') {
-    action = '<span class="shop-owned">Sizda bor ✓</span>';
+    action = allWorn(item)
+      ? '<span class="shop-owned">Kiyilgan ✓</span>'
+      : `<button class="ghost" data-equip-set="${item.id}">Hammasini kiyish</button>`;
   } else if (isEquipped) {
     action = '<span class="shop-owned">Kiyilgan ✓</span>';
   } else if (isOwned) {
@@ -206,7 +257,7 @@ function card(item) {
 
 // ---------------------------------------------------------------- amallar
 
-async function equip(slot, itemId) {
+export async function equip(slot, itemId) {
   if (!owns(itemId)) return toast("Bu ko'rinish hali sizda yo'q", 'bad');
   state.equipped[slot] = itemId;
   haptic('light');
@@ -280,7 +331,8 @@ async function waitForItem(itemId, tries = 6) {
     await loadShop();
     if (owns(itemId)) {
       const item = getItem(itemId);
-      if (item?.slot && item.slot !== 'bundle') await equip(item.slot, itemId);
+      if (item?.slot === 'bundle') await equipSet(itemId);
+      else if (item?.slot) await equip(item.slot, itemId);
       return true;
     }
     await new Promise((r) => setTimeout(r, 900));

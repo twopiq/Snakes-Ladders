@@ -303,6 +303,27 @@ export class Store {
     return { total: rows.length, shown: filtered.slice(0, limit) };
   }
 
+  /**
+   * To'plamdagi hamma narsani o'z bo'limiga kiydiradi.
+   * To'plam sotib olingach o'yinchi to'rtta bo'limni qo'lda aylanib chiqmasin.
+   */
+  equipSet(tgId, itemId) {
+    const item = getItem(itemId);
+    if (!item) return { ok: false, error: 'Bunday ko\'rinish yo\'q' };
+    const u = this.user(tgId);
+    const worn = [];
+    for (const id of grantsOf(itemId)) {
+      const part = getItem(id);
+      if (!part || !SLOTS.includes(part.slot)) continue; // to'plamning o'zi kiyilmaydi
+      if (!u.owned.includes(id)) continue;
+      u.equipped[part.slot] = id;
+      worn.push(id);
+    }
+    if (!worn.length) return { ok: false, error: 'Kiyish uchun narsa topilmadi' };
+    this.saveSoon();
+    return { ok: true, equipped: u.equipped, worn };
+  }
+
   /** Sotib olingan ko'rinishni kiyadi. */
   equip(tgId, slot, itemId) {
     if (!SLOTS.includes(slot)) return { ok: false, error: 'Noma\'lum bo\'lim' };

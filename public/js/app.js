@@ -5,6 +5,7 @@ import { createGame, applyRoll, rollDice, DEFAULT_RULES, PLAYER_COLORS, MIN_PLAY
 import { GameView, escapeHtml } from './game-view.js';
 import { OnlineClient } from './online.js';
 import { loadShop, renderShop, equippedNow, onEquipChange, onOpenFriends } from './shop.js';
+import { renderWardrobe, wardrobeLinks } from './wardrobe.js';
 import { loadFriends, renderFriends, reportPlayed } from './friends.js';
 import { renderMenuPromo, openTelegramApp, canPromote, telegramAppLink } from './promo.js';
 import { sound } from './sound.js';
@@ -53,6 +54,11 @@ function goto(screenId) {
   if (screenId === 'screen-friends') {
     renderFriends();
     loadFriends().then(renderFriends);
+  }
+  if (screenId === 'screen-wardrobe') {
+    renderWardrobe();
+    // Do'kondan yoki mukofotdan yangi narsa ochilgan bo'lishi mumkin
+    loadShop().then(renderWardrobe);
   }
   showBackButton(screenId !== 'screen-menu');
   if (screenId !== 'screen-game') setMainButton({ show: false });
@@ -246,7 +252,9 @@ async function init() {
 
   $('#shopBtn').addEventListener('click', () => goto('screen-shop'));
   $('#friendsBtn').addEventListener('click', () => goto('screen-friends'));
+  $('#mineBtn').addEventListener('click', () => goto('screen-wardrobe'));
   onOpenFriends(() => goto('screen-friends'));
+  wardrobeLinks({ shop: () => goto('screen-shop'), friends: () => goto('screen-friends') });
   $('#helpBtn').addEventListener('click', showHelp);
   const soundBtn = $('#soundBtn');
   soundBtn.classList.toggle('off', !sound.enabled);
@@ -263,6 +271,7 @@ async function init() {
 
   onEquipChange((equipped) => {
     view.board?.setSkins(equipped);
+    if ($('#screen-wardrobe').classList.contains('active')) renderWardrobe();
   });
 
   await loadConfig();

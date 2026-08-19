@@ -982,3 +982,66 @@ button.primary.danger {
   color: #fff;
 }
 button.primary.danger:hover { filter: brightness(1.06); }
+
+/* ---------- mening ko'rinishlarim ---------- */
+.worn-panel .worn-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-top: 10px;
+}
+.worn-item { text-align: center; }
+.worn-item canvas {
+  width: 100%;
+  max-width: 96px;
+  height: 78px;
+  border-radius: 10px;
+  background: var(--panel-2);
+}
+.worn-item b { display: block; font-size: 12px; margin-top: 6px; }
+.worn-item small { color: var(--muted); font-size: 11px; }
+
+.mine-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+.mine-card {
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  padding: 10px 8px;
+  border-radius: 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-align: center;
+}
+.mine-card:hover:not([disabled]) { border-color: var(--accent); }
+.mine-card[disabled] { cursor: default; }
+.mine-card.on { border-color: var(--accent-2); background: rgba(34, 197, 94, .10); }
+.mine-card canvas { width: 100%; max-width: 96px; height: 70px; }
+.mine-card b { font-size: 12px; }
+.mine-card .rarity { font-size: 11px; }
+.mine-card .mine-state { font-size: 11px; color: var(--muted); }
+.mine-card.on .mine-state { color: var(--accent-2); }
+
+.mine-bundles { display: grid; gap: 8px; margin-top: 10px; }
+.mine-bundle {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+}
+.mine-bundle small { display: block; color: var(--muted); font-size: 11px; margin-top: 2px; }
+
+@media (max-width: 560px) {
+  .worn-panel .worn-row { grid-template-columns: repeat(2, 1fr); }
+}
