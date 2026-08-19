@@ -29,16 +29,17 @@
     <button class="brand" id="brandBtn" type="button">
       <span class="brand-mark">🐍</span>
       <span>
-        <strong>Ilonlar va Narvonlar</strong>
-        <small>onlayn · oflayn · 5 ta xarita</small>
+        <strong data-i18n="app.title">Ilonlar va Narvonlar</strong>
+        <small data-i18n="app.tagline">onlayn · oflayn · 5 ta xarita</small>
       </span>
     </button>
     <div class="topbar-actions">
-      <button class="icon-btn" id="friendsBtn" type="button" title="Do'stlar">👥</button>
-      <button class="icon-btn" id="mineBtn" type="button" title="Mening ko'rinishlarim">🎨</button>
-      <button class="icon-btn" id="shopBtn" type="button" title="Do'kon">🛍</button>
-      <button class="icon-btn" id="soundBtn" type="button" title="Ovoz">🔊</button>
-      <button class="icon-btn" id="helpBtn" type="button" title="Qoidalar">?</button>
+      <button class="icon-btn" id="friendsBtn" type="button" data-i18n-title="top.friends" title="Do'stlar">👥</button>
+      <button class="icon-btn" id="mineBtn" type="button" data-i18n-title="top.mine" title="Mening ko'rinishlarim">🎨</button>
+      <button class="icon-btn" id="shopBtn" type="button" data-i18n-title="top.shop" title="Do'kon">🛍</button>
+      <button class="icon-btn" id="soundBtn" type="button" data-i18n-title="top.sound" title="Ovoz">🔊</button>
+      <button class="icon-btn" id="langBtn" type="button" data-i18n-title="top.lang" title="Til">UZ</button>
+      <button class="icon-btn" id="helpBtn" type="button" data-i18n-title="top.rules" title="Qoidalar">?</button>
     </div>
   </header>
 
@@ -46,40 +47,40 @@
     <!-- ============ MENYU ============ -->
     <section class="screen active" id="screen-menu">
       <div class="hero">
-        <h1>Ilonlar va Narvonlar</h1>
-        <p>Qo'lda chizilgan taxtaning elektron ko'rinishi. Do'stlaringiz bilan internet orqali yoki bitta qurilmada o'ynang.</p>
+        <h1 data-i18n="app.title">Ilonlar va Narvonlar</h1>
+        <p data-i18n="menu.lead">Qo'lda chizilgan taxtaning elektron ko'rinishi. Do'stlaringiz bilan internet orqali yoki bitta qurilmada o'ynang.</p>
       </div>
       <div class="promo-slot hidden" id="menuPromo"></div>
       <div class="mode-grid">
         <button class="mode-card" data-goto="screen-online" type="button">
           <span class="mode-emoji">🌐</span>
-          <h2>Onlayn o'yin</h2>
-          <p>2 dan 4 kishigacha, real vaqtda. Xona kodini do'stlaringizga yuboring yoki tezkor raqib toping.</p>
-          <span class="mode-go">Boshlash →</span>
+          <h2 data-i18n="menu.online.title">Onlayn o'yin</h2>
+          <p data-i18n="menu.online.text">2 dan 4 kishigacha, real vaqtda. Xona kodini do'stlaringizga yuboring yoki tezkor raqib toping.</p>
+          <span class="mode-go" data-i18n="common.start">Boshlash →</span>
         </button>
         <button class="mode-card" data-goto="screen-offline" type="button">
           <span class="mode-emoji">👨‍👩‍👧‍👦</span>
-          <h2>Oflayn o'yin</h2>
-          <p>Bitta qurilmada 2 dan 6 kishigacha. Navbat bilan zar tashlanadi, internet shart emas.</p>
-          <span class="mode-go">Boshlash →</span>
+          <h2 data-i18n="menu.offline.title">Oflayn o'yin</h2>
+          <p data-i18n="menu.offline.text">Bitta qurilmada 2 dan 6 kishigacha. Navbat bilan zar tashlanadi, internet shart emas.</p>
+          <span class="mode-go" data-i18n="common.start">Boshlash →</span>
         </button>
         <button class="mode-card" data-goto="screen-shop" type="button">
           <span class="mode-emoji">🛍</span>
-          <h2>Do'kon</h2>
-          <p>Fishka, narvon, ilon va taxta ko'rinishlari. Telegram Stars (⭐) orqali ochiladi.</p>
-          <span class="mode-go">Ko'rish →</span>
+          <h2 data-i18n="menu.shop.title">Do'kon</h2>
+          <p data-i18n="menu.shop.text">Fishka, narvon, ilon va taxta ko'rinishlari. Telegram Stars (⭐) orqali ochiladi.</p>
+          <span class="mode-go" data-i18n="common.view">Ko'rish →</span>
         </button>
         <button class="mode-card" data-goto="screen-wardrobe" type="button">
           <span class="mode-emoji">🎨</span>
-          <h2>Mening ko'rinishlarim</h2>
-          <p>Ochilgan fishka, narvon, ilon va taxtalar. Bir bosishda kiyiladi va o'yinda darhol ko'rinadi.</p>
-          <span class="mode-go">Ochish →</span>
+          <h2 data-i18n="menu.mine.title">Mening ko'rinishlarim</h2>
+          <p data-i18n="menu.mine.text">Ochilgan fishka, narvon, ilon va taxtalar. Bir bosishda kiyiladi va o'yinda darhol ko'rinadi.</p>
+          <span class="mode-go" data-i18n="common.open">Ochish →</span>
         </button>
         <button class="mode-card" data-goto="screen-friends" type="button">
           <span class="mode-emoji">🎁</span>
-          <h2>Do'stlarni chaqiring</h2>
-          <p>3, 5, 7 va 10 ta do'st uchun maxsus ko'rinishlar — ularni yulduz bilan sotib bo'lmaydi.</p>
-          <span class="mode-go">Mukofotlar →</span>
+          <h2 data-i18n="menu.friends.title">Do'stlarni chaqiring</h2>
+          <p data-i18n="menu.friends.text">3, 5, 7 va 10 ta do'st uchun maxsus ko'rinishlar — ularni yulduz bilan sotib bo'lmaydi.</p>
+          <span class="mode-go" data-i18n="menu.friends.go">Mukofotlar →</span>
         </button>
       </div>
       <div class="map-preview-strip" id="menuMaps"></div>
@@ -87,19 +88,19 @@
 
     <!-- ============ OFLAYN SOZLAMA ============ -->
     <section class="screen" id="screen-offline">
-      <button class="back-btn" data-goto="screen-menu" type="button">← Menyu</button>
-      <h2 class="screen-title">Oflayn o'yin sozlamalari</h2>
+      <button class="back-btn" data-goto="screen-menu" type="button" data-i18n="common.back">← Menyu</button>
+      <h2 class="screen-title" data-i18n="offline.title">Oflayn o'yin sozlamalari</h2>
 
       <div class="setup-grid">
         <div class="panel">
-          <h3>1. Xaritani tanlang</h3>
+          <h3 data-i18n="offline.step1">1. Xaritani tanlang</h3>
           <div class="map-list" id="offlineMaps"></div>
         </div>
 
         <div class="panel">
-          <h3>2. O'yinchilar</h3>
+          <h3 data-i18n="offline.step2">2. O'yinchilar</h3>
           <div class="counter">
-            <span>Nechta o'yinchi?</span>
+            <span data-i18n="offline.howMany">Nechta o'yinchi?</span>
             <div class="counter-btns">
               <button type="button" id="playersMinus">−</button>
               <output id="playersCount">3</output>
@@ -108,69 +109,69 @@
           </div>
           <div class="player-inputs" id="playerInputs"></div>
 
-          <h3>3. Qoidalar</h3>
+          <h3 data-i18n="offline.step3">3. Qoidalar</h3>
           <div class="rules" id="offlineRules"></div>
 
-          <button class="primary big" id="startOffline" type="button">O'yinni boshlash</button>
+          <button class="primary big" id="startOffline" type="button" data-i18n="offline.start">O'yinni boshlash</button>
         </div>
       </div>
     </section>
 
     <!-- ============ ONLAYN LOBBI ============ -->
     <section class="screen" id="screen-online">
-      <button class="back-btn" data-goto="screen-menu" type="button">← Menyu</button>
-      <h2 class="screen-title">Onlayn o'yin — 2-4 kishi, real vaqtda</h2>
+      <button class="back-btn" data-goto="screen-menu" type="button" data-i18n="common.back">← Menyu</button>
+      <h2 class="screen-title" data-i18n="online.title">Onlayn o'yin — 2-4 kishi, real vaqtda</h2>
 
       <div class="setup-grid">
         <div class="panel">
-          <h3>Ismingiz</h3>
-          <input class="text-input" id="onlineName" maxlength="16" placeholder="Ismingiz" />
+          <h3 data-i18n="online.yourName">Ismingiz</h3>
+          <input class="text-input" id="onlineName" maxlength="16" data-i18n-ph="online.yourName" placeholder="Ismingiz" />
 
-          <h3>Xarita (xona ochuvchi uchun)</h3>
+          <h3 data-i18n="online.mapForHost">Xarita (xona ochuvchi uchun)</h3>
           <div class="map-list compact" id="onlineMaps"></div>
 
-          <h3>Qoidalar (xona ochuvchi uchun)</h3>
+          <h3 data-i18n="online.rulesForHost">Qoidalar (xona ochuvchi uchun)</h3>
           <div class="rules" id="onlineRules"></div>
         </div>
 
         <div class="panel">
-          <h3>Yangi xona ochish</h3>
+          <h3 data-i18n="online.newRoom">Yangi xona ochish</h3>
           <div class="counter">
-            <span>Nechta o'yinchi?</span>
+            <span data-i18n="offline.howMany">Nechta o'yinchi?</span>
             <div class="counter-btns">
               <button type="button" id="onlineMinus">−</button>
               <output id="onlineCount">2</output>
               <button type="button" id="onlinePlus">+</button>
             </div>
           </div>
-          <p class="muted">Xona kodi hosil bo'ladi — uni do'stlaringizga yuboring.
+          <p class="muted" data-i18n="online.roomHint">Xona kodi hosil bo'ladi — uni do'stlaringizga yuboring.
           Hamma yig'ilmasa ham, xona egasi o'yinni erta boshlashi mumkin.</p>
-          <button class="primary big" id="createRoom" type="button">Xona ochish</button>
+          <button class="primary big" id="createRoom" type="button" data-i18n="online.create">Xona ochish</button>
 
-          <div class="divider"><span>yoki</span></div>
+          <div class="divider"><span data-i18n="common.or">yoki</span></div>
 
-          <h3>Kod bilan qo'shilish</h3>
+          <h3 data-i18n="online.joinByCode">Kod bilan qo'shilish</h3>
           <div class="join-row">
-            <input class="text-input code-input" id="joinCode" maxlength="4" placeholder="XONA" autocomplete="off" />
-            <button class="primary" id="joinRoom" type="button">Qo'shilish</button>
+            <input class="text-input code-input" id="joinCode" maxlength="4" data-i18n-ph="online.codePlaceholder" placeholder="XONA" autocomplete="off" />
+            <button class="primary" id="joinRoom" type="button" data-i18n="online.join">Qo'shilish</button>
           </div>
 
-          <div class="divider"><span>yoki</span></div>
+          <div class="divider"><span data-i18n="common.or">yoki</span></div>
 
-          <h3>Tezkor o'yin</h3>
-          <p class="muted">Navbatdagi birinchi raqib bilan avtomatik juftlanasiz.</p>
-          <button class="ghost big" id="quickMatch" type="button">Raqib topish</button>
+          <h3 data-i18n="online.quick">Tezkor o'yin</h3>
+          <p class="muted" data-i18n="online.quickHint">Navbatdagi birinchi raqib bilan avtomatik juftlanasiz.</p>
+          <button class="ghost big" id="quickMatch" type="button" data-i18n="online.findOpponent">Raqib topish</button>
 
-          <p class="conn-status" id="connStatus">Ulanmagan</p>
+          <p class="conn-status" id="connStatus" data-i18n="online.notConnected">Ulanmagan</p>
         </div>
       </div>
     </section>
 
     <!-- ============ DO'KON ============ -->
     <section class="screen" id="screen-shop">
-      <button class="back-btn" data-goto="screen-menu" type="button">← Menyu</button>
+      <button class="back-btn" data-goto="screen-menu" type="button" data-i18n="common.back">← Menyu</button>
       <div class="shop-head">
-        <h2 class="screen-title">Do'kon</h2>
+        <h2 class="screen-title" data-i18n="shop.title">Do'kon</h2>
         <span class="shop-stars" id="shopStars"></span>
       </div>
       <p class="muted hidden" id="shopNote"></p>
@@ -180,17 +181,17 @@
 
     <!-- ============ MENING KO'RINISHLARIM ============ -->
     <section class="screen" id="screen-wardrobe">
-      <button class="back-btn" data-goto="screen-menu" type="button">← Menyu</button>
-      <h2 class="screen-title">Mening ko'rinishlarim</h2>
-      <p class="muted">Kiyilgan ko'rinish o'yinda darhol qo'llanadi — taxtada ham, fishkangizda ham.</p>
+      <button class="back-btn" data-goto="screen-menu" type="button" data-i18n="common.back">← Menyu</button>
+      <h2 class="screen-title" data-i18n="mine.title">Mening ko'rinishlarim</h2>
+      <p class="muted" data-i18n="mine.subtitle">Kiyilgan ko'rinish o'yinda darhol qo'llanadi — taxtada ham, fishkangizda ham.</p>
       <div id="wardrobeBody"></div>
     </section>
 
     <!-- ============ DO'STLAR ============ -->
     <section class="screen" id="screen-friends">
-      <button class="back-btn" data-goto="screen-menu" type="button">← Menyu</button>
-      <h2 class="screen-title">Do'stlarni chaqiring</h2>
-      <p class="muted">Bu ko'rinishlarni yulduz bilan sotib bo'lmaydi — faqat do'st chaqirib olinadi.</p>
+      <button class="back-btn" data-goto="screen-menu" type="button" data-i18n="common.back">← Menyu</button>
+      <h2 class="screen-title" data-i18n="friends.title">Do'stlarni chaqiring</h2>
+      <p class="muted" data-i18n="friends.subtitle">Bu ko'rinishlarni yulduz bilan sotib bo'lmaydi — faqat do'st chaqirib olinadi.</p>
       <div id="friendsBody"></div>
     </section>
 
@@ -198,7 +199,7 @@
     <section class="screen game" id="screen-game">
       <div class="board-area">
         <div class="board-head">
-          <button class="back-btn small" id="leaveGame" type="button">← Chiqish</button>
+          <button class="back-btn small" id="leaveGame" type="button" data-i18n="game.exit">← Chiqish</button>
           <span class="map-badge" id="mapBadge"></span>
           <span class="room-badge hidden" id="roomBadge"></span>
         </div>
@@ -209,36 +210,36 @@
 
       <aside class="side">
         <div class="turn-box" id="turnBox">
-          <span class="turn-label">Navbat</span>
+          <span class="turn-label" data-i18n="game.turn">Navbat</span>
           <span class="turn-name" id="turnName">—</span>
         </div>
 
         <div class="dice-box">
-          <div class="dice" id="dice" aria-label="Zar"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
-          <button class="primary big roll-btn" id="rollBtn" type="button">Zar tashlash</button>
+          <div class="dice" id="dice" aria-label="Zar" data-i18n-aria="game.dice"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+          <button class="primary big roll-btn" id="rollBtn" type="button" data-i18n="game.roll">Zar tashlash</button>
           <p class="hint" id="rollHint"></p>
         </div>
 
         <div class="players" id="playersPanel"></div>
 
         <div class="tabs">
-          <button class="tab active" data-tab="log" type="button">Jurnal</button>
-          <button class="tab hidden" data-tab="chat" id="chatTab" type="button">Chat</button>
+          <button class="tab active" data-tab="log" type="button" data-i18n="game.log">Jurnal</button>
+          <button class="tab hidden" data-tab="chat" id="chatTab" type="button" data-i18n="game.chat">Chat</button>
         </div>
         <div class="tab-body">
           <ul class="log" id="log"></ul>
           <div class="chat hidden" id="chatPane">
             <ul class="chat-list" id="chatList"></ul>
             <form class="chat-form" id="chatForm">
-              <input id="chatInput" maxlength="200" placeholder="Xabar yozing..." autocomplete="off" />
+              <input id="chatInput" maxlength="200" data-i18n-ph="game.chatPlaceholder" placeholder="Xabar yozing..." autocomplete="off" />
               <button class="primary" type="submit">↵</button>
             </form>
           </div>
         </div>
 
         <div class="side-actions">
-          <button class="ghost" id="rematchBtn" type="button">Qayta o'ynash</button>
-          <button class="ghost" id="toMenuBtn" type="button">Menyu</button>
+          <button class="ghost" id="rematchBtn" type="button" data-i18n="game.rematch">Qayta o'ynash</button>
+          <button class="ghost" id="toMenuBtn" type="button" data-i18n="common.menu">Menyu</button>
         </div>
       </aside>
     </section>

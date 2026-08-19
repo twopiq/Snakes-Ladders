@@ -10,6 +10,7 @@ import { Store } from './store.js';
 import { createBot } from './bot.js';
 import { MAPS } from '../public/shared/maps.js';
 import { COSMETICS, getItem } from '../public/shared/cosmetics.js';
+import { t, itemText } from '../public/shared/i18n.js';
 
 const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -381,8 +382,8 @@ function shopUser(body) {
   if (!telegramEnabled) return { ok: false, error: 'Do\'kon faqat Telegram ichida ishlaydi' };
   const res = verifyInitData(body.initData);
   if (!res.ok) return { ok: false, error: reasonText(res.reason), reason: res.reason };
-  shop.touch(res.user.id, res.user.name);
-  return { ok: true, tgId: res.user.id, name: res.user.name };
+  shop.touch(res.user.id, res.user.name, res.user.lang);
+  return { ok: true, tgId: res.user.id, name: res.user.name, lang: res.user.lang };
 }
 
 /**
@@ -465,12 +466,13 @@ async function handleApi(req, res, url) {
       // O'yinchiga xabar berish ixtiyoriy — bot ulanmagan bo'lsa jim o'tamiz
       let notified = false;
       if (bot && body.notify !== false && result.added > 0) {
+        const lang = shop.langOf(tgId) || undefined;
         notified = await bot.notify(tgId, [
-          '🎁 <b>Sizga sovg\'a!</b>',
+          t('bot.giftTitle', null, lang),
           '',
-          `<b>${item.name}</b> ochildi — hech qanday yulduz kerak emas.`,
+          t('bot.giftText', { name: itemText(item, 'name', lang) }, lang),
           '',
-          "O'yinni ochib, \"Do'kon\" bo'limidan kiyib oling.",
+          t('bot.rewardHint', null, lang),
         ].join('\n')).then(() => true).catch(() => false);
       }
       return json(res, 200, { ...result, itemName: item.name, notified });
@@ -527,13 +529,14 @@ async function handleApi(req, res, url) {
     // Mijoz o'yin boshlaganini bildiradi — shu payt taklif "tasdiqlangan" bo'ladi
     const result = shop.markPlayed(who.tgId);
     if (result.rewards.length && bot) {
-      const names = result.rewards.map((r) => getItem(r.itemId)?.name).filter(Boolean);
+      const lang = shop.langOf(result.referrerId) || undefined;
+      const names = result.rewards.map((r) => itemText(getItem(r.itemId), 'name', lang)).filter(Boolean);
       bot.notify(result.referrerId, [
-        '🎁 <b>Yangi ko\'rinish ochildi!</b>',
+        t('bot.rewardTitle', null, lang),
         '',
-        `Do'stlaringiz uchun rahmat — sizga ${names.map((n) => `<b>${n}</b>`).join(', ')} berildi.`,
+        t('bot.rewardText', { items: names.map((n) => `<b>${n}</b>`).join(', ') }, lang),
         '',
-        "O'yinni ochib, do'kondan kiyib oling.",
+        t('bot.rewardHint', null, lang),
       ].join('\n')).catch(() => {});
     }
     return json(res, 200, { ok: true, ref, referral: shop.referralInfo(who.tgId) });
@@ -564,7 +567,7 @@ async function handleApi(req, res, url) {
     // Mukofot ko'rinishlari hech qachon sotilmaydi — faqat do'st chaqirib olinadi
     if (item.unlock) return json(res, 400, { error: `Bu ko'rinish faqat ${item.unlock.count} ta do'st chaqirib olinadi` });
     if (!bot) return json(res, 503, { error: 'To\'lovlar hozircha yoqilmagan' });
-    const result = await bot.createInvoice({ itemId: String(body.itemId), tgId: who.tgId });
+    const result = await bot.createInvoice({ itemId: String(body.itemId), tgId: who.tgId, lang: who.lang });
     return json(res, result.ok ? 200 : 400, result);
   }
 

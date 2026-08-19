@@ -1,5 +1,7 @@
 /** WebSocket mijozi: xona ochish/qo'shilish, zar so'rovi, chat, qayta ulanish. */
 
+import { t } from '../shared/i18n.js';
+
 const STORAGE_KEY = 'il_session';
 
 /**
@@ -62,7 +64,7 @@ export class OnlineClient {
 
       ws.onopen = () => {
         this.retry = 0;
-        this.on.onStatus?.('Serverga ulandi', 'ok');
+        this.on.onStatus?.(t('online.connected'), 'ok');
         this.startHeartbeat();
         resolve();
       };
@@ -78,14 +80,14 @@ export class OnlineClient {
       };
 
       ws.onerror = () => {
-        this.on.onStatus?.('Ulanishda xatolik', 'bad');
+        this.on.onStatus?.(t('online.connError'), 'bad');
       };
 
       ws.onclose = () => {
         this.stopHeartbeat();
         this.ws = null;
         this.ready = null;
-        this.on.onStatus?.('Aloqa uzildi', 'bad');
+        this.on.onStatus?.(t('online.lost'), 'bad');
         this.on.onDisconnected?.();
         if (!this.manualClose && this.session) this.scheduleReconnect();
         reject(new Error('closed'));
@@ -99,7 +101,7 @@ export class OnlineClient {
     const delay = Math.min(8000, 800 * 2 ** this.retry++);
     setTimeout(() => {
       if (this.connected || this.manualClose) return;
-      this.on.onStatus?.('Qayta ulanmoqda...', '');
+      this.on.onStatus?.(t('online.reconnecting'), '');
       this.connect().then(() => {
         if (this.session) this.send({ t: 'rejoin', ...this.session });
       }).catch(() => {});
@@ -115,7 +117,7 @@ export class OnlineClient {
       clearTimeout(this.pongTimer);
       this.pongTimer = setTimeout(() => {
         if (!this.connected) return;
-        this.on.onStatus?.('Aloqa tekshirilmoqda...', '');
+        this.on.onStatus?.(t('online.checking'), '');
         try {
           this.ws.close(); // onclose qayta ulanishni boshlaydi
         } catch {
@@ -246,7 +248,7 @@ export class OnlineClient {
     const mark = this.lastMessageAt;
     this.expectTimer = setTimeout(() => {
       if (this.lastMessageAt !== mark) return; // javob keldi — hammasi joyida
-      this.on.onStatus?.('Javob kelmadi — sinxronlanmoqda...', '');
+      this.on.onStatus?.(t('online.syncing'), '');
       if (!this.send({ t: 'sync' })) return this.hardReconnect();
       setTimeout(() => {
         if (this.lastMessageAt === mark) this.hardReconnect();
@@ -256,7 +258,7 @@ export class OnlineClient {
 
   /** Ulanishni majburan yangilaydi (yarim ochiq soketni yopib). */
   hardReconnect() {
-    this.on.onStatus?.('Ulanish yangilanmoqda...', '');
+    this.on.onStatus?.(t('online.refreshing'), '');
     try {
       this.ws?.close();
     } catch {

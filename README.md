@@ -113,7 +113,7 @@ server/
   store.js       O'yinchilar, xaridlar va narxlar (JSON saqlagich)
   static.js      public/ katalogini xavfsiz uzatish
 public/
-  index.html     Ekranlar: menyu, oflayn sozlama, onlayn lobbi, o'yin
+  index.html     Ekranlar: menyu, oflayn sozlama, onlayn lobbi, ko'rinishlar, o'yin
   css/style.css
   js/
     app.js       Ekranlar va rejimlarni bog'lash
@@ -124,6 +124,8 @@ public/
     shop.js      Do'kon: ko'rinishlar, Stars xaridlari
     promo.js     Saytdan Telegram ilovasiga yo'naltirish
     friends.js   Do'st chaqirish ekrani va mukofotlar
+    wardrobe.js  "Mening ko'rinishlarim" — ochilganlarni kiyish
+    lang.js      Til tanlash, sahifadagi matnlarni almashtirish
     preview.js   Do'kon/mukofot namunalari
     admin.js     Admin paneli (narxlar, xaridlar, qaytarish)
     sound.js     Ovoz effektlari
@@ -132,6 +134,7 @@ public/
     maps.js      Xaritalar (server va brauzer uchun umumiy)
     engine.js    O'yin qoidalari — sof funksiyalar, umumiy
     cosmetics.js Ko'rinishlar katalogi va narxlari
+    i18n.js      Uch tilli lug'at (uz/ru/en) — server ham shundan foydalanadi
   admin.html     Narx boshqaruvi sahifasi
 assets/brand/       Bot avatari, muqova va ulashuv rasmlari (SVG + PNG)
 tools/gen-maps.mjs  Xarita generatori
@@ -155,6 +158,20 @@ o'ylaydi, lekin serverdan xabar kelmaydi. Shunga qarshi:
 - animatsiya kadrlari kelmasa (fon rejimi) yurish darhol yakunlanadi — o'yin
   hech qachon "qotib" qolmaydi;
 - server navbat xatosiga javoban joriy holatni ham yuboradi.
+
+## Tillar
+
+O'yin **uch tilda**: o'zbekcha, ruscha va inglizcha.
+
+- til birinchi ochilishda o'zi tanlanadi: Telegram profilidagi til → brauzer tili → o'zbekcha;
+- yuqoridagi **UZ / RU / EN** tugmasi orqali qo'lda almashtiriladi va tanlov eslab qolinadi;
+- xarita nomlari, do'kondagi ko'rinishlar, qoidalar, o'yin jurnali va bot xabarlari — hammasi tarjima qilingan;
+- o'yin jurnali **matn emas, tarjima kaliti** bo'lib saqlanadi (`public/shared/engine.js`), shuning uchun
+  onlayn o'yinda har bir o'yinchi bir xil holatni o'z tilida ko'radi;
+- bot har bir o'yinchiga uning Telegram tilida javob beradi.
+
+Lug'at bitta faylda: `public/shared/i18n.js` — har bir kalit uchun uchala til yonma-yon turadi.
+Test tarjima tushib qolganini, HTML va koddagi kalitlar lug'atda borligini tekshiradi.
 
 ## Tezlik
 

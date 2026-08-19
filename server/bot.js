@@ -11,6 +11,7 @@
 
 import { getItem } from '../public/shared/cosmetics.js';
 import { setBotUsername } from './telegram.js';
+import { t, itemText, detectLang } from '../public/shared/i18n.js';
 
 const STARS = 'XTR';
 
@@ -31,6 +32,9 @@ export function createBot({ token, store, webappUrl = '' }) {
     return data.result;
   }
 
+  /** Telegram profilidagi til (bo'lmasa saqlangani, u ham bo'lmasa o'zbekcha). */
+  const langOf = (from) => detectLang([from?.language_code, store.langOf?.(from?.id)]);
+
   const playButton = (text, startParam = '') => {
     // r<id> — taklif, aks holda xona kodi
     const query = !startParam ? ''
@@ -40,7 +44,7 @@ export function createBot({ token, store, webappUrl = '' }) {
   };
 
   /** Do'kondagi narsa uchun to'lov havolasi (Telegram Stars). */
-  async function createInvoice({ itemId, tgId }) {
+  async function createInvoice({ itemId, tgId, lang = null }) {
     const item = getItem(itemId);
     if (!item) return { ok: false, error: 'Bunday ko\'rinish yo\'q' };
     if (item.unlock) return { ok: false, error: `Bu ko'rinish faqat ${item.unlock.count} ta do'st chaqirib olinadi` };
@@ -50,15 +54,18 @@ export function createBot({ token, store, webappUrl = '' }) {
 
     const stars = store.price(itemId);
     const payload = `v1|${itemId}|${tgId}|${Date.now()}`;
+    const code = lang || store.langOf?.(tgId) || null;
+    const title = itemText(item, 'name', code);
+    const about = itemText(item, 'about', code) || title;
 
     try {
       const link = await call('createInvoiceLink', {
-        title: item.name.slice(0, 32),
-        description: (item.about || item.name).slice(0, 255),
+        title: title.slice(0, 32),
+        description: about.slice(0, 255),
         payload,
         provider_token: '', // Stars uchun provider kerak emas
         currency: STARS,
-        prices: [{ label: item.name.slice(0, 32), amount: stars }],
+        prices: [{ label: title.slice(0, 32), amount: stars }],
       });
       return { ok: true, link, stars };
     } catch (err) {
@@ -70,11 +77,12 @@ export function createBot({ token, store, webappUrl = '' }) {
   /** O'yinchiga oddiy xabar yuborish (masalan mukofot haqida). */
   async function notify(tgId, html) {
     if (!tgId) return;
+    const lang = store.langOf?.(tgId) || undefined;
     await call('sendMessage', {
       chat_id: Number(tgId),
       text: html,
       parse_mode: 'HTML',
-      reply_markup: playButton("🎮 O'yinni ochish"),
+      reply_markup: playButton(t('bot.open', null, lang)),
     });
   }
 
@@ -115,11 +123,18 @@ export function createBot({ token, store, webappUrl = '' }) {
         name: [msg.from?.first_name, msg.from?.last_name].filter(Boolean).join(' '),
       });
 
+      const lang = langOf(msg.from);
       await call('sendMessage', {
         chat_id: chatId,
         parse_mode: 'HTML',
-        text: `✅ <b>${item.name}</b> ochildi!\n\nO'yinni oching va "Do'kon" bo'limidan kiying.\n\n<i>Xarid raqami: <code>${sp.telegram_payment_charge_id}</code></i>`,
-        reply_markup: playButton("🎮 O'yinni ochish"),
+        text: [
+          t('bot.paid', { name: itemText(item, 'name', lang) }, lang),
+          '',
+          t('bot.paidHint', null, lang),
+          '',
+          t('bot.chargeId', { id: sp.telegram_payment_charge_id }, lang),
+        ].join('\n'),
+        reply_markup: playButton(t('bot.open', null, lang)),
       }).catch(() => {});
       return;
     }
@@ -133,55 +148,59 @@ export function createBot({ token, store, webappUrl = '' }) {
 
       // Taklifni shu yerdayoq biriktiramiz — Mini App ochilmasa ham yo'qolmasin.
       // (Mini App ochilganda ham qayta yuboriladi, lekin ikkinchi marta hisoblanmaydi.)
+      const lang = langOf(msg.from);
+      if (msg.from?.id) store.touch(String(msg.from.id), [msg.from.first_name, msg.from.last_name].filter(Boolean).join(' '), lang);
+
       let refNote = '';
       if (isRef && msg.from?.id) {
         const res = store.attachReferral(String(msg.from.id), param.slice(1));
-        refNote = res.ok
-          ? "Sizni do'stingiz chaqirdi — bitta o'yin o'ynasangiz, unga mukofot ochiladi 🎁"
-          : res.error === 'self'
-            ? "O'z havolangiz orqali kirdingiz — bu hisobga olinmaydi."
-            : res.error === 'already'
-              ? "Siz allaqachon boshqa do'stning taklifi bilan kirgansiz."
-              : "Siz o'yinni avval o'ynagansiz, shuning uchun bu taklif hisobga olinmaydi.";
+        refNote = res.ok ? t('bot.refOk', null, lang)
+          : res.error === 'self' ? t('bot.refSelf', null, lang)
+          : res.error === 'already' ? t('bot.refAlready', null, lang)
+          : t('bot.refLate', null, lang);
       }
 
       await call('sendMessage', {
         chat_id: chatId,
         parse_mode: 'HTML',
         text: [
-          '🐍 <b>Ilonlar va Narvonlar</b>',
+          `🐍 <b>${t('app.title', null, lang)}</b>`,
           '',
-          "Klassik taxta o'yinining elektron ko'rinishi.",
+          t('bot.lead', null, lang),
           '',
-          '• <b>Onlayn</b> — 2 dan 4 kishigacha, real vaqtda',
-          '• <b>Oflayn</b> — bitta telefonda 2-6 kishi',
-          "• Do'konda fishka, narvon, ilon va taxta ko'rinishlari",
+          `• ${t('bot.online', null, lang)}`,
+          `• ${t('bot.offline', null, lang)}`,
+          `• ${t('bot.shop', null, lang)}`,
           '',
-          code ? `🎟 Xona kodi: <code>${code}</code>`
+          code ? t('bot.roomCode', { code }, lang)
             : isRef ? refNote
-            : "Pastdagi tugmani bosing va o'ynang!",
+            : t('bot.press', null, lang),
         ].join('\n'),
-        reply_markup: playButton(code ? `🎮 ${code} xonasiga kirish` : "🎮 O'ynash", code || param),
+        reply_markup: playButton(
+          code ? t('bot.joinRoom', { code }, lang) : t('bot.play', null, lang),
+          code || param,
+        ),
       }).catch(() => {});
       return;
     }
 
     if (text.startsWith('/help') || text.startsWith('/qoida')) {
+      const lang = langOf(msg.from);
       await call('sendMessage', {
         chat_id: chatId,
         parse_mode: 'HTML',
         text: [
-          '<b>Qoidalar</b>',
+          t('bot.rulesTitle', null, lang),
           '',
-          '• Navbat bilan zar tashlanadi.',
-          '• 🪜 narvon yuqoriga, 🐍 ilon pastga tushiradi.',
-          '• ★ bonus — qo\'shimcha zar, ✖ tuzoq — bir yurish yo\'q.',
-          '• Finishga aniq tushish kerak.',
+          `• ${t('bot.r1', null, lang)}`,
+          `• ${t('bot.r2', null, lang)}`,
+          `• ${t('bot.r3', null, lang)}`,
+          `• ${t('bot.r4', null, lang)}`,
           '',
-          '<b>Do\'kon</b>: ko\'rinishlar Telegram Stars (⭐) orqali olinadi.',
-          'Muammo bo\'lsa /support yozing.',
+          t('bot.shopLine', null, lang),
+          t('bot.supportLine', null, lang),
         ].join('\n'),
-        reply_markup: playButton("🎮 O'ynash"),
+        reply_markup: playButton(t('bot.play', null, lang)),
       }).catch(() => {});
       return;
     }
@@ -190,20 +209,16 @@ export function createBot({ token, store, webappUrl = '' }) {
       await call('sendMessage', {
         chat_id: chatId,
         parse_mode: 'HTML',
-        text: [
-          "Xarid bilan bog'liq muammo bormi?",
-          '',
-          "Xarid raqamingizni (<code>charge id</code>) shu yerga yuboring — tekshirib,",
-          "kerak bo'lsa yulduzlarni qaytaramiz.",
-        ].join('\n'),
+        text: [t('bot.supportTitle', null, langOf(msg.from)), '', t('bot.supportText', null, langOf(msg.from))].join('\n'),
       }).catch(() => {});
       return;
     }
 
+    const lang = langOf(msg.from);
     await call('sendMessage', {
       chat_id: chatId,
-      text: "O'ynash uchun pastdagi tugmani bosing 👇",
-      reply_markup: playButton("🎮 O'ynash"),
+      text: t('bot.pressShort', null, lang),
+      reply_markup: playButton(t('bot.play', null, lang)),
     }).catch(() => {});
   }
 
@@ -215,24 +230,25 @@ export function createBot({ token, store, webappUrl = '' }) {
     await call('answerPreCheckoutQuery', {
       pre_checkout_query_id: q.id,
       ok,
-      ...(ok ? {} : { error_message: 'Bu ko\'rinish hozir sotuvda emas. Yulduzlaringiz saqlanib qoladi.' }),
+      ...(ok ? {} : { error_message: t('bot.notForSale', null, langOf(q.from)) }),
     }).catch((err) => console.error('preCheckout:', err.message));
   }
 
   async function onInlineQuery(q) {
+    const lang = langOf(q.from);
     await call('answerInlineQuery', {
       inline_query_id: q.id,
       cache_time: 5,
       results: [{
         type: 'article',
         id: 'play',
-        title: "Ilonlar va Narvonlar — o'ynashga taklif",
-        description: "Do'stingizni o'yinga chaqirish",
+        title: t('bot.inviteTitle', null, lang),
+        description: t('bot.inviteDesc', null, lang),
         input_message_content: {
-          message_text: "🐍 <b>Ilonlar va Narvonlar</b>\nQani, kim tezroq marraga yetadi?",
+          message_text: t('bot.inviteMsg', null, lang),
           parse_mode: 'HTML',
         },
-        reply_markup: playButton("🎮 O'ynash"),
+        reply_markup: playButton(t('bot.play', null, lang)),
       }],
     }).catch(() => {});
   }
@@ -244,14 +260,14 @@ export function createBot({ token, store, webappUrl = '' }) {
     console.log(`Telegram bot ulandi: @${me.username}`);
     if (webappUrl.startsWith('https://')) {
       await call('setChatMenuButton', {
-        menu_button: { type: 'web_app', text: "O'ynash", web_app: { url: webappUrl } },
+        menu_button: { type: 'web_app', text: t('bot.menuButton'), web_app: { url: webappUrl } },
       }).catch(() => {});
     }
     await call('setMyCommands', {
       commands: [
-        { command: 'start', description: "O'yinni boshlash" },
-        { command: 'help', description: 'Qoidalar' },
-        { command: 'support', description: "Xarid bo'yicha yordam" },
+        { command: 'start', description: t('bot.cmdStart') },
+        { command: 'help', description: t('bot.cmdHelp') },
+        { command: 'support', description: t('bot.cmdSupport') },
       ],
     }).catch(() => {});
   }

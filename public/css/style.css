@@ -1045,3 +1045,24 @@ button.primary.danger:hover { filter: brightness(1.06); }
 @media (max-width: 560px) {
   .worn-panel .worn-row { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* til tanlash */
+.lang-list { display: grid; gap: 8px; margin: 14px 0; }
+.lang-option {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.lang-option:hover { border-color: var(--accent); }
+.lang-option.on { border-color: var(--accent-2); background: rgba(34, 197, 94, .10); }
+.lang-option span { color: var(--muted); font-size: 12px; }
+#langBtn { font-size: 12px; font-weight: 700; letter-spacing: .04em; }

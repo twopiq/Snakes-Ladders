@@ -10,6 +10,8 @@ import { sound } from './sound.js';
 import { haptic } from './telegram.js';
 import { promoModalHtml } from './promo.js';
 import { $, toast, showModal, hideModal } from './ui.js';
+import { t } from '../shared/i18n.js';
+import { mapText } from '../shared/i18n.js';
 
 const PIPS = {
   1: [4],
@@ -89,8 +91,8 @@ export class GameView {
       const code = this.el.roomBadge.dataset.code;
       if (!code) return;
       navigator.clipboard?.writeText(code).then(
-        () => toast('Xona kodi nusxalandi: ' + code),
-        () => toast('Kod: ' + code),
+        () => toast(t('msg.roomCodeCopied', { code })),
+        () => toast(t('msg.code', { code })),
       );
     });
 
@@ -135,14 +137,13 @@ export class GameView {
 
     this.board.tokens.clear();
     this.board.setPlayers(state.players);
-    this.el.mapBadge.textContent = `${map.name} · ${state.size} katak`;
 
     if (mode === 'online' && roomCode) {
-      this.el.roomBadge.textContent = `Xona: ${roomCode}`;
       this.el.roomBadge.dataset.code = roomCode;
       this.el.roomBadge.classList.remove('hidden');
       this.el.chatTab.classList.remove('hidden');
     } else {
+      delete this.el.roomBadge.dataset.code;
       this.el.roomBadge.classList.add('hidden');
       this.el.chatTab.classList.add('hidden');
       this.switchTab('log');
@@ -223,10 +224,10 @@ export class GameView {
 
   /** Zar tugmasidagi matn. */
   rollLabel(state, can) {
-    if (state.status === 'finished') return "O'yin tugadi";
-    if (can) return 'Zar tashlash';
-    if (this.mode === 'online') return 'Raqib navbati';
-    return this.animating ? 'Yurish...' : 'Zar tashlash';
+    if (state.status === 'finished') return t('game.over');
+    if (can) return t('game.roll');
+    if (this.mode === 'online') return t('game.opponentTurn');
+    return this.animating ? t('game.rollWait') : t('game.roll');
   }
 
   async _update(state, events) {
@@ -323,7 +324,7 @@ export class GameView {
         haptic('success');
         await this.board.flash(ev.from, 160);
         await this.board.glide(ev.playerId, ev.to, 920);
-        toast(`${player?.name || ''} narvondan ${ev.from} → ${ev.to} ko'tarildi 🪜`);
+        toast(t('ev.ladder', { name: player?.name || '', from: ev.from, to: ev.to }));
         break;
 
       case 'snake':
@@ -331,32 +332,32 @@ export class GameView {
         haptic('error');
         await this.board.flash(ev.from, 160);
         await this.board.glide(ev.playerId, ev.to, 1000);
-        toast(`${player?.name || ''} ilonga tushdi: ${ev.from} → ${ev.to} 🐍`, 'bad');
+        toast(t('ev.snake', { name: player?.name || '', from: ev.from, to: ev.to }), 'bad');
         break;
 
       case 'bonus':
         sound.bonus();
         haptic('success');
-        toast(`${player?.name || ''} bonus katak — qo'shimcha zar! ★`);
+        toast(t('ev.bonus', { name: player?.name || '' }));
         await wait(140);
         break;
 
       case 'trap':
         sound.trap();
         haptic('warning');
-        toast(`${player?.name || ''} tuzoqqa tushdi — bir yurish yo'q ✖`, 'bad');
+        toast(t('ev.trap', { name: player?.name || '' }), 'bad');
         await wait(140);
         break;
 
       case 'penalty':
-        toast(`${player?.name || ''}: ketma-ket 3 ta 6 — yurish bekor`, 'bad');
+        toast(t('ev.penalty', { name: player?.name || '' }), 'bad');
         await wait(140);
         break;
 
       case 'finish':
         sound.win();
         haptic('success');
-        toast(`🏁 ${player?.name || ''} — ${ev.rank}-o'rin!`);
+        toast(t('ev.rank', { name: player?.name || '', rank: ev.rank }));
         await wait(300);
         break;
 
@@ -394,6 +395,12 @@ export class GameView {
   render() {
     const state = this.state;
     if (!state) return;
+
+    // Yorliqlar har renderda qayta yoziladi — til almashsa ular ham o'zgaradi
+    const map = getMap(state.mapId);
+    this.el.mapBadge.textContent = `${mapText(map)} · ${t('game.cells', { n: state.size })}`;
+    const code = this.el.roomBadge.dataset.code;
+    if (code) this.el.roomBadge.textContent = t('game.room', { code });
     // Navbat va tugma serverdagi eng oxirgi holatga qaraydi, taxta esa
     // animatsiya tugagunicha o'z holicha qoladi.
     const turnState = this.mode === 'online' ? (this.serverState || state) : state;
@@ -401,11 +408,11 @@ export class GameView {
 
     // navbat
     if (turnState.status === 'finished') {
-      this.el.turnName.textContent = "O'yin tugadi";
+      this.el.turnName.textContent = t('game.over');
       this.el.turnBox.style.borderLeftColor = 'var(--gold)';
     } else {
       const mine = this.mode === 'online' && turnState.turn === this.mySeat;
-      this.el.turnName.textContent = mine ? `${cur.name} (siz)` : cur.name;
+      this.el.turnName.textContent = mine ? `${cur.name} (${t('game.you')})` : cur.name;
       this.el.turnBox.style.borderLeftColor = cur.hex;
     }
 
@@ -414,11 +421,13 @@ export class GameView {
     this.el.rollBtn.disabled = !can;
     this.el.rollBtn.textContent = this.rollLabel(turnState, can);
     if (turnState.status === 'finished') {
-      this.el.rollHint.textContent = "Natijalar uchun \"Qayta o'ynash\"ni bosing";
+      this.el.rollHint.textContent = t('game.overHint');
     } else if (can) {
-      this.el.rollHint.textContent = this.mode === 'offline' ? `Navbat: ${cur.name}` : 'Sizning navbatingiz!';
+      this.el.rollHint.textContent = this.mode === 'offline'
+        ? t('game.turnOf', { name: cur.name })
+        : t('game.yourTurn');
     } else if (this.mode === 'online') {
-      this.el.rollHint.textContent = 'Kuting...';
+      this.el.rollHint.textContent = t('game.wait');
     } else {
       this.el.rollHint.textContent = '';
     }
@@ -440,11 +449,11 @@ export class GameView {
         + (p.finished ? ' done' : '')
         + (p.left ? ' left' : '');
       const meta = [];
-      if (p.left) meta.push('chiqib ketdi 🚪');
-      else if (p.finished) meta.push(`${p.rank}-o'rin 🏁`);
-      if (p.skipTurns > 0) meta.push(`${p.skipTurns} yurish o'tkazadi`);
+      if (p.left) meta.push(t('game.left'));
+      else if (p.finished) meta.push(t('game.place', { rank: p.rank }));
+      if (p.skipTurns > 0) meta.push(t('game.skips', { n: p.skipTurns }));
       meta.push(`🪜 ${p.stats.ladders} · 🐍 ${p.stats.snakes}`);
-      const you = this.mode === 'online' && i === this.mySeat ? ' (siz)' : '';
+      const you = this.mode === 'online' && i === this.mySeat ? ` (${t('game.you')})` : '';
       card.innerHTML = `
         <span class="dot" style="background:${p.hex}"></span>
         <span class="who"><b>${escapeHtml(p.name)}${you}</b><small>${meta.join(' · ')}</small></span>
@@ -457,7 +466,7 @@ export class GameView {
     for (const entry of state.log.slice(-40)) {
       const li = document.createElement('li');
       li.className = entry.kind || 'info';
-      li.textContent = entry.text;
+      li.textContent = logText(entry);
       this.el.log.appendChild(li);
     }
     this.el.log.scrollTop = this.el.log.scrollHeight;
@@ -482,18 +491,18 @@ export class GameView {
       return `<li>
         <span class="medal">${medals[r.rank - 1] || `${r.rank}.`}</span>
         <span class="dot" style="background:${p?.hex || '#888'}"></span>
-        <span><b>${escapeHtml(r.name)}</b><br><small>🪜 ${p?.stats.ladders ?? 0} narvon · 🐍 ${p?.stats.snakes ?? 0} ilon · ${p?.stats.rolls ?? 0} zar</small></span>
+        <span><b>${escapeHtml(r.name)}</b><br><small>${escapeHtml(t('results.stats', { ladders: p?.stats.ladders ?? 0, snakes: p?.stats.snakes ?? 0, rolls: p?.stats.rolls ?? 0 }))}</small></span>
         <span>${p?.pos ?? ''}</span>
       </li>`;
     }).join('');
 
     showModal(`
-      <h2>🏆 ${escapeHtml(state.ranking[0]?.name || '')} g'olib!</h2>
+      <h2>${escapeHtml(t('results.winner', { name: state.ranking[0]?.name || '' }))}</h2>
       <ul class="rank-list">${rows}</ul>
       ${promoModalHtml()}
       <div class="modal-actions">
-        <button class="primary" data-act="rematch">Qayta o'ynash</button>
-        <button class="ghost" data-act="menu">Menyu</button>
+        <button class="primary" data-act="rematch">${t('game.rematch')}</button>
+        <button class="ghost" data-act="menu">${t('common.menu')}</button>
       </div>`, (act) => {
       if (act === 'telegram') return this.on.onTelegram?.();
       hideModal();
@@ -501,6 +510,18 @@ export class GameView {
       if (act === 'menu') this.on.onLeave?.();
     });
   }
+}
+
+/**
+ * Jurnal yozuvi matni.
+ * Yangi yozuvlar kalit bilan keladi (server tilni bilmaydi — har kim o'z tilida
+ * ko'radi), eski yozuvlarda tayyor matn bo'lishi mumkin.
+ */
+function logText(entry) {
+  if (!entry.key) return entry.text || '';
+  const params = { ...(entry.params || {}) };
+  if (params.mapId) params.map = mapText(getMap(params.mapId));
+  return t(entry.key, params);
 }
 
 function wait(ms) {

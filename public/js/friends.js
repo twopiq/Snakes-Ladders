@@ -12,6 +12,7 @@ import { canPromote, openTelegramApp, telegramAppLink } from './promo.js';
 import { $, toast } from './ui.js';
 import { escapeHtml } from './game-view.js';
 import { drawItemPreview } from './preview.js';
+import { t, itemText } from '../shared/i18n.js';
 
 const state = { confirmed: 0, pending: 0, rewards: [], link: null, tgId: null, loaded: false };
 
@@ -67,8 +68,8 @@ export function renderFriends() {
     console.error('friends render:', err);
     root.innerHTML = `
       <div class="panel">
-        <h3>Ekranni ochib bo'lmadi</h3>
-        <p class="muted">Ilovani yopib, qaytadan oching. Muammo qolsa — botga /support yozing.</p>
+        <h3>${t('friends.openFail')}</h3>
+        <p class="muted">${t('friends.openFailText')}</p>
         <p class="muted" style="font-family:ui-monospace,monospace;font-size:11px">${escapeHtml(String(err.message || err))}</p>
       </div>`;
   }
@@ -79,10 +80,9 @@ function renderFriendsInner(root) {
   if (!isTelegram()) {
     root.innerHTML = `
       <div class="panel">
-        <h3>Do'stlarni chaqirish</h3>
-        <p class="muted">Taklif havolasi va mukofotlar Telegram ilovasida ishlaydi —
-        chaqirilgan do'st sizning Telegram hisobingizga bog'lanadi.</p>
-        ${canPromote() ? '<button class="primary big" data-open-tg="1">Telegram\'da ochish</button>' : ''}
+        <h3>${t('friends.siteTitle')}</h3>
+        <p class="muted">${t('friends.siteText')}</p>
+        ${canPromote() ? `<button class="primary big" data-open-tg="1">${t('common.openInTelegram')}</button>` : ''}
       </div>
       ${rewardsHtml(new Set())}`;
     for (const el of root.querySelectorAll('[data-open-tg]')) {
@@ -101,25 +101,20 @@ function renderFriendsInner(root) {
     <div class="panel friends-top">
       <div class="friends-count">
         <b>${state.confirmed}</b>
-        <span>do'st o'ynadi${state.pending ? ` · ${state.pending} ta hali o'ynamagan` : ''}</span>
+        <span>${t('friends.played')}${state.pending ? ` · ${t('friends.pending', { n: state.pending })}` : ''}</span>
       </div>
       <div class="progress"><div class="progress-fill" style="width:${percent}%"></div></div>
       <p class="muted">${next
-        ? `Keyingi mukofotgacha yana <b>${next.count - state.confirmed}</b> ta do'st`
-        : 'Barcha mukofotlar ochildi — rahmat! 🎉'}</p>
+        ? t('friends.next', { n: next.count - state.confirmed })
+        : t('friends.allDone')}</p>
       ${state.link ? `
-        <button class="primary big" data-invite="1">Do'stni chaqirish</button>
-        <button class="ghost big" data-copy="1">Havolani nusxalash</button>
+        <button class="primary big" data-invite="1">${t('friends.invite')}</button>
+        <button class="ghost big" data-copy="1">${t('friends.copyLink')}</button>
         <p class="link-box">${escapeHtml(state.link)}</p>
       ` : `
-        <p class="conn-status bad">Taklif havolasi tayyor emas: serverda bot nomi
-        (<code>BOT_USERNAME</code>) sozlanmagan. Admin panelidagi "Telegram holati"
-        bo'limiga qarang.</p>
+        <p class="conn-status bad">${t('friends.linkNotReady')}</p>
       `}
-      <p class="muted" style="margin-top:12px">
-        Do'st havolangiz orqali kirib, kamida bitta o'yin boshlasa — hisobga qo'shiladi.
-        Havolani ochgan, lekin hali o'ynamaganlar "kutilmoqda" da turadi.
-      </p>
+      <p class="muted" style="margin-top:12px">${t('friends.rule')}</p>
     </div>
     ${rewardsHtml(unlocked)}`;
 
@@ -137,10 +132,10 @@ function rewardsHtml(unlocked) {
       <div class="reward ${done ? 'done' : ''}">
         <div class="reward-preview"><canvas data-item="${item.id}"></canvas></div>
         <div class="reward-info">
-          <span class="reward-tier">${tier.count} ta do'st</span>
-          <b>${escapeHtml(item.name)}</b>
-          <span class="rarity" style="color:${rarity.color}">${escapeHtml(rarity.name)}</span>
-          <small>${escapeHtml(item.about)}</small>
+          <span class="reward-tier">${escapeHtml(t('friends.tier', { n: tier.count }))}</span>
+          <b>${escapeHtml(itemText(item))}</b>
+          <span class="rarity" style="color:${rarity.color}">${escapeHtml(t(`rarity.${item.rarity}`))}</span>
+          <small>${escapeHtml(itemText(item, 'about'))}</small>
         </div>
         <div class="reward-state">${done ? '✅' : '🔒'}</div>
       </div>`;
@@ -155,17 +150,17 @@ function drawPreviews(root) {
 
 function invite() {
   haptic('light');
-  if (!state.link) return toast('Havola tayyor emas', 'bad');
-  const text = "Ilonlar va Narvonlar o'ynaymizmi? Men bilan o'ynasang, menga mukofot ochiladi 🎁";
+  if (!state.link) return toast(t('friends.linkNotReadyShort'), 'bad');
+  const text = t('friends.inviteText');
   const url = `https://t.me/share/url?url=${encodeURIComponent(state.link)}&text=${encodeURIComponent(text)}`;
   if (isTelegram()) window.Telegram.WebApp.openTelegramLink(url);
   else shareRoom('', text);
 }
 
 function copyLink() {
-  if (!state.link) return toast('Havola tayyor emas', 'bad');
+  if (!state.link) return toast(t('friends.linkNotReadyShort'), 'bad');
   navigator.clipboard?.writeText(state.link).then(
-    () => toast('Havola nusxalandi'),
+    () => toast(t('msg.linkCopied')),
     () => toast(state.link),
   );
 }

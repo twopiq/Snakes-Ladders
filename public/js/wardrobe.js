@@ -6,13 +6,14 @@
  * mumkin. Tanlangan ko'rinish shu zahoti taxtaga qo'llanadi.
  */
 
-import { SLOTS, SLOT_NAMES, RARITY, getItem } from '../shared/cosmetics.js';
+import { SLOTS, RARITY, getItem } from '../shared/cosmetics.js';
 import { drawItemPreview } from './preview.js';
 import { shopState, equip, equipSet } from './shop.js';
 import { isTelegram } from './telegram.js';
 import { canPromote, openTelegramApp } from './promo.js';
 import { $ } from './ui.js';
 import { escapeHtml } from './game-view.js';
+import { t, itemText } from '../shared/i18n.js';
 
 let onShop = () => {};
 let onFriends = () => {};
@@ -65,15 +66,15 @@ export function renderWardrobe() {
 function wornHtml(state) {
   return `
     <div class="panel worn-panel">
-      <h3>Hozir kiyilgan</h3>
+      <h3>${t('mine.worn')}</h3>
       <div class="worn-row">
         ${SLOTS.map((slot) => {
           const item = getItem(state.equipped[slot]) || {};
           return `
             <div class="worn-item">
               <canvas data-preview="${escapeHtml(item.id || '')}"></canvas>
-              <b>${escapeHtml(item.name || '—')}</b>
-              <small>${escapeHtml(SLOT_NAMES[slot] || slot)}</small>
+              <b>${escapeHtml(itemText(item) || '—')}</b>
+              <small>${escapeHtml(t(`slot.${slot}`))}</small>
             </div>`;
         }).join('')}
       </div>
@@ -84,7 +85,7 @@ function groupHtml(slot, list, state) {
   if (!list.length) return '';
   return `
     <div class="panel">
-      <h3>${escapeHtml(SLOT_NAMES[slot] || slot)} <small class="muted">${list.length} ta</small></h3>
+      <h3>${escapeHtml(t(`slot.${slot}`))} <small class="muted">${escapeHtml(t('mine.count', { n: list.length }))}</small></h3>
       <div class="mine-grid">
         ${list.map((item) => {
           const worn = state.equipped[slot] === item.id;
@@ -93,9 +94,9 @@ function groupHtml(slot, list, state) {
             <button class="mine-card ${worn ? 'on' : ''}" type="button"
                     ${worn ? 'disabled' : `data-wear="${escapeHtml(item.id)}" data-slot="${escapeHtml(slot)}"`}>
               <canvas data-preview="${escapeHtml(item.id)}"></canvas>
-              <b>${escapeHtml(item.name)}${item.unlock ? ' 🎁' : ''}</b>
-              <span class="rarity" style="color:${rarity.color}">${escapeHtml(rarity.name)}</span>
-              <span class="mine-state">${worn ? 'Kiyilgan ✓' : 'Kiyish'}</span>
+              <b>${escapeHtml(itemText(item))}${item.unlock ? ' 🎁' : ''}</b>
+              <span class="rarity" style="color:${rarity.color}">${escapeHtml(t(`rarity.${item.rarity}`))}</span>
+              <span class="mine-state">${escapeHtml(worn ? t('shop.worn') : t('shop.wear'))}</span>
             </button>`;
         }).join('')}
       </div>
@@ -105,7 +106,7 @@ function groupHtml(slot, list, state) {
 function bundlesHtml(bundles, state) {
   return `
     <div class="panel">
-      <h3>To'plamlar</h3>
+      <h3>${t('slot.bundle')}</h3>
       <div class="mine-bundles">
         ${bundles.map((item) => {
           const parts = (item.grants || []).map((id) => getItem(id)).filter((x) => x && x.slot !== 'bundle');
@@ -113,12 +114,12 @@ function bundlesHtml(bundles, state) {
           return `
             <div class="mine-bundle">
               <div>
-                <b>🎁 ${escapeHtml(item.name)}</b>
-                <small>${parts.map((x) => escapeHtml(x.name)).join(' · ')}</small>
+                <b>🎁 ${escapeHtml(itemText(item))}</b>
+                <small>${parts.map((x) => escapeHtml(itemText(x))).join(' · ')}</small>
               </div>
               ${worn
-                ? '<span class="shop-owned">Kiyilgan ✓</span>'
-                : `<button class="ghost" type="button" data-wear-set="${escapeHtml(item.id)}">Hammasini kiyish</button>`}
+                ? `<span class="shop-owned">${t('shop.worn')}</span>`
+                : `<button class="ghost" type="button" data-wear-set="${escapeHtml(item.id)}">${t('shop.wearAll')}</button>`}
             </div>`;
         }).join('')}
       </div>
@@ -131,19 +132,18 @@ function hintHtml(total) {
   if (!onlyStarters) {
     return `
       <p class="muted" style="text-align:center">
-        Yangi ko'rinishlar do'konda va do'st chaqirish mukofotlarida.
-        <button class="link-btn" type="button" data-go-shop="1">Do'kon →</button>
+        ${t('mine.hint')}
+        <button class="link-btn" type="button" data-go-shop="1">${t('mine.toShop')}</button>
       </p>`;
   }
   return `
     <div class="panel">
-      <h3>Hali yangi ko'rinish yo'q</h3>
-      <p class="muted">Fishka, narvon, ilon va taxta ko'rinishlarini ikki yo'l bilan ochish mumkin:
-      do'kondan yulduz (⭐) bilan sotib olish yoki do'st chaqirib mukofot yig'ish.</p>
+      <h3>${t('mine.emptyTitle')}</h3>
+      <p class="muted">${t('mine.emptyText')}</p>
       <div class="modal-actions" style="justify-content:flex-start">
-        <button class="primary" type="button" data-go-shop="1">Do'konga o'tish</button>
-        <button class="ghost" type="button" data-go-friends="1">Do'st chaqirish</button>
-        ${!isTelegram() && canPromote() ? '<button class="ghost" type="button" data-open-tg="1">Telegram\'da ochish</button>' : ''}
+        <button class="primary" type="button" data-go-shop="1">${t('mine.goShop')}</button>
+        <button class="ghost" type="button" data-go-friends="1">${t('mine.goFriends')}</button>
+        ${!isTelegram() && canPromote() ? `<button class="ghost" type="button" data-open-tg="1">${t('common.openInTelegram')}</button>` : ''}
       </div>
     </div>`;
 }

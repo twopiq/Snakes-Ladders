@@ -12,6 +12,7 @@
  */
 
 import { isTelegram, tgConfig } from './telegram.js';
+import { t } from '../shared/i18n.js';
 
 const HIDE_KEY = 'il_promo_hidden_until';
 const HIDE_DAYS = 7;
@@ -67,12 +68,11 @@ export function renderMenuPromo(root) {
     <div class="promo">
       <span class="promo-emoji">🎁</span>
       <div class="promo-text">
-        <b>Telegram'da ko'proq imkoniyat</b>
-        <small>Ko'rinishlar do'koni (fishka, narvon, ilon, taxta), do'stni bir bosishda
-        chaqirish va ismingiz avtomatik — hammasi Telegram ilovasida.</small>
+        <b>${t('promo.title')}</b>
+        <small>${t('promo.text')}</small>
       </div>
-      <button class="primary" type="button" data-promo="open">Telegram'da ochish</button>
-      <button class="promo-close" type="button" data-promo="close" title="Yopish" aria-label="Yopish">×</button>
+      <button class="primary" type="button" data-promo="open">${t('common.openInTelegram')}</button>
+      <button class="promo-close" type="button" data-promo="close" title="×" aria-label="×">×</button>
     </div>`;
 
   root.querySelector('[data-promo="close"]').addEventListener('click', () => {
@@ -89,12 +89,11 @@ export function promoModalHtml() {
     <div class="promo inline">
       <span class="promo-emoji">⭐</span>
       <div class="promo-text">
-        <b>Fishkangizni almashtirasizmi?</b>
-        <small>Toj, olmos, ajdaho, oltin narvon va boshqa ko'rinishlar Telegram ilovasida.</small>
+        <b>${t('promo.swapTitle')}</b>
+        <small>${t('promo.swapText')}</small>
       </div>
-      <button class="ghost" type="button" data-act="telegram">Ochish</button>
+      <button class="ghost" type="button" data-act="telegram">${t('common.open')}</button>
     </div>`;
 }
 
-/** Do'kondagi pullik kartochka uchun tugma matni. */
-export const LOCK_LABEL = "Telegram'da ochish";
+

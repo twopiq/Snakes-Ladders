@@ -74,7 +74,7 @@ export function createGame({ mapId, players, rules = {}, seatOwners = null }) {
     lastMove: null,
     status: 'playing', // 'playing' | 'finished'
     ranking: [],
-    log: [{ text: `O'yin boshlandi — ${map.name}`, kind: 'info' }],
+    log: [{ key: 'log.start', params: { mapId: map.id }, kind: 'info' }],
   };
 }
 
@@ -102,7 +102,7 @@ export function applyRoll(state, dice) {
   player.stats.rolls += 1;
   next.lastRoll = { playerId: player.id, dice, turnNo: next.turnNo };
   events.push({ type: 'roll', playerId: player.id, dice });
-  log(next, `${player.name} — zar: ${dice}`, 'roll');
+  log(next, 'log.roll', { name: player.name, dice }, 'roll');
 
   let extraTurn = false;
 
@@ -116,7 +116,7 @@ export function applyRoll(state, dice) {
   if (next.rules.tripleSixPenalty && player.sixStreak >= 3) {
     player.sixStreak = 0;
     events.push({ type: 'penalty', playerId: player.id, reason: 'triple-six' });
-    log(next, `${player.name} ketma-ket 3 ta 6 tashladi — yurish bekor!`, 'bad');
+    log(next, 'log.tripleSix', { name: player.name }, 'bad');
     advanceTurn(next, events);
     return { state: next, events };
   }
@@ -139,7 +139,7 @@ export function applyRoll(state, dice) {
   player.stats.steps += Math.abs(target - from);
   player.pos = target;
   events.push({ type: 'move', playerId: player.id, from, to: target, bounced });
-  if (bounced) log(next, `${player.name} finishdan oshib ketdi — ${target}-katakka qaytdi`, 'info');
+  if (bounced) log(next, 'log.bounce', { name: player.name, cell: target }, 'info');
 
   // --- Narvon / ilon ---
   if (target !== next.size) {
@@ -150,20 +150,20 @@ export function applyRoll(state, dice) {
       player.pos = ladderTo;
       player.stats.ladders += 1;
       events.push({ type: 'ladder', playerId: player.id, from: target, to: ladderTo });
-      log(next, `${player.name} narvondan ko'tarildi: ${target} → ${ladderTo}`, 'good');
+      log(next, 'log.ladder', { name: player.name, from: target, to: ladderTo }, 'good');
     } else if (snakeTo) {
       player.pos = snakeTo;
       player.stats.snakes += 1;
       events.push({ type: 'snake', playerId: player.id, from: target, to: snakeTo });
-      log(next, `${player.name} ilonga yutildi: ${target} → ${snakeTo}`, 'bad');
+      log(next, 'log.snake', { name: player.name, from: target, to: snakeTo }, 'bad');
     } else if (next.rules.specialCells && (map.bonus || []).includes(target)) {
       extraTurn = true;
       events.push({ type: 'bonus', playerId: player.id, cell: target });
-      log(next, `${player.name} bonus katakka tushdi — qo'shimcha zar!`, 'good');
+      log(next, 'log.bonus', { name: player.name }, 'good');
     } else if (next.rules.specialCells && (map.traps || []).includes(target)) {
       player.skipTurns += 1;
       events.push({ type: 'trap', playerId: player.id, cell: target });
-      log(next, `${player.name} tuzoqqa tushdi — bir yurish o'tkazib yuboriladi`, 'bad');
+      log(next, 'log.trap', { name: player.name }, 'bad');
     }
   }
 
@@ -175,7 +175,7 @@ export function applyRoll(state, dice) {
     player.rank = next.ranking.length + 1;
     next.ranking.push({ playerId: player.id, name: player.name, rank: player.rank });
     events.push({ type: 'finish', playerId: player.id, rank: player.rank });
-    log(next, `🏁 ${player.name} marraga yetdi — ${player.rank}-o'rin!`, 'win');
+    log(next, 'log.finish', { name: player.name, rank: player.rank }, 'win');
 
     const remaining = next.players.filter((p) => !p.finished);
     if (!next.rules.playToLast || remaining.length <= 1) {
@@ -189,7 +189,7 @@ export function applyRoll(state, dice) {
 
   if (extraTurn) {
     events.push({ type: 'extra-turn', playerId: player.id });
-    log(next, `${player.name} yana tashlaydi`, 'info');
+    log(next, 'log.again', { name: player.name }, 'info');
   } else {
     advanceTurn(next, events);
   }
@@ -212,7 +212,7 @@ export function abandonPlayer(state, playerId) {
   player.finished = true;
   player.left = true;
   const events = [{ type: 'left', playerId: player.id }];
-  log(next, `${player.name} o'yinni tark etdi`, 'bad');
+  log(next, 'log.left', { name: player.name }, 'bad');
 
   const active = next.players.filter((p) => !p.finished);
   if (active.length <= 1) {
@@ -243,7 +243,7 @@ function closeGame(state, events) {
   }
   state.status = 'finished';
   events.push({ type: 'gameover', ranking: state.ranking });
-  log(state, "O'yin tugadi", 'info');
+  log(state, 'log.over', null, 'info');
 }
 
 /** Navbatni keyingi o'yinchiga o'tkazadi, tuzoqdagilarni o'tkazib yuboradi. */
@@ -256,7 +256,7 @@ function advanceTurn(state, events) {
     if (p.skipTurns > 0) {
       p.skipTurns -= 1;
       events.push({ type: 'skip', playerId: p.id });
-      log(state, `${p.name} bu yurishni o'tkazib yubordi`, 'info');
+      log(state, 'log.skipped', { name: p.name }, 'info');
       continue;
     }
     state.turn = idx;
@@ -268,8 +268,15 @@ function advanceTurn(state, events) {
   closeGame(state, events);
 }
 
-function log(state, text, kind = 'info') {
-  state.log.push({ text, kind });
+/**
+ * Jurnalga yozuv qo'shadi.
+ *
+ * Matn emas, tarjima kaliti saqlanadi: onlayn o'yinda holatni server yasaydi,
+ * lekin har bir o'yinchi jurnalni o'z tilida ko'rishi kerak. Matn mijozda
+ * (game-view.js dagi logText) yig'iladi.
+ */
+function log(state, key, params = null, kind = 'info') {
+  state.log.push(params ? { key, params, kind } : { key, kind });
   if (state.log.length > 120) state.log.splice(0, state.log.length - 120);
 }
 

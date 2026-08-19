@@ -10,17 +10,21 @@ import { loadFriends, renderFriends, reportPlayed } from './friends.js';
 import { renderMenuPromo, openTelegramApp, canPromote, telegramAppLink } from './promo.js';
 import { sound } from './sound.js';
 import {
-  isTelegram, initTelegram, loadConfig, tgUserName, initData, startParam,
+  isTelegram, initTelegram, loadConfig, tgUserName, tgLanguage, initData, startParam,
   shareRoom, showBackButton, setMainButton, setClosingConfirmation, appVersion, haptic,
 } from './telegram.js';
 import { $, $$, showScreen, toast, showModal, hideModal } from './ui.js';
+import { t, mapText, itemText } from '../shared/i18n.js';
+import { initLang, showLangPicker, applyStatic } from './lang.js';
+import { onLangChange } from '../shared/i18n.js';
 
+// Qoidalar ro'yxati — matnlari lug'atdan olinadi (rule.<key>.title / .note)
 const RULE_INFO = [
-  { key: 'exactFinish', title: 'Finishga aniq tushish', note: 'Ortiqcha qadamlar orqaga qaytariladi' },
-  { key: 'sixExtraTurn', title: '6 tashlasa — yana tashlaydi', note: "Qo'shimcha yurish huquqi" },
-  { key: 'tripleSixPenalty', title: 'Ketma-ket 3 ta 6 — yurish bekor', note: 'Omadga qarshi muvozanat' },
-  { key: 'specialCells', title: '★ bonus va ✖ tuzoq kataklari', note: 'Bonus qayta zar, tuzoq bir yurish' },
-  { key: 'playToLast', title: "Barcha o'rinlar aniqlanguncha", note: "Birinchi g'olibdan keyin ham davom etadi", offlineOnly: true },
+  { key: 'exactFinish' },
+  { key: 'sixExtraTurn' },
+  { key: 'tripleSixPenalty' },
+  { key: 'specialCells' },
+  { key: 'playToLast', offlineOnly: true },
 ];
 
 const S = {
@@ -99,13 +103,11 @@ function askLeave() {
   haptic('warning');
   const online = S.mode === 'online';
   showModal(`
-    <h2>O'yindan chiqasizmi?</h2>
-    <p>${online
-      ? "O'yin davom etmoqda. Chiqsangiz o'rningiz bo'shaydi va qaytib kira olmaysiz — qolganlar davom etadi."
-      : "O'yin davom etmoqda. Chiqsangiz joriy o'yin yo'qoladi."}</p>
+    <h2>${t('leave.title')}</h2>
+    <p>${online ? t('leave.online') : t('leave.offline')}</p>
     <div class="modal-actions">
-      <button class="ghost" data-act="stay">Yo'q, davom etaman</button>
-      <button class="primary danger" data-act="leave">Ha, chiqaman</button>
+      <button class="ghost" data-act="stay">${t('leave.stay')}</button>
+      <button class="primary danger" data-act="leave">${t('leave.go')}</button>
     </div>`, (act) => {
     hideModal();
     if (act === 'leave') leaveGame();
@@ -149,7 +151,7 @@ const view = new GameView({
 function requestRoll() {
   if (!view.canRoll()) return;
   if (S.mode === 'offline') return offlineRoll();
-  if (!net.roll()) toast("Aloqa uzilgan — qayta ulanmoqda...", 'bad');
+  if (!net.roll()) toast(t('msg.linkLost'), 'bad');
 }
 
 // ---------------------------------------------------------------- onlayn mijoz
@@ -171,7 +173,7 @@ const net = new OnlineClient({
     if (typeof seat === 'number') S.online.mySeat = seat;
     S.online.inGame = false;
     applyRoom(room);
-    toast("Yangi o'yin boshlandi");
+    toast(t('msg.newGame'));
   },
   onRoll: (msg) => {
     S.online.room = msg.room;
@@ -183,9 +185,9 @@ const net = new OnlineClient({
   onNotice: (text) => toast(text),
   onQueued: () => {
     showModal(`
-      <h2>Raqib qidirilmoqda...</h2>
-      <p>Boshqa o'yinchi "Raqib topish" tugmasini bosishi bilan o'yin boshlanadi.</p>
-      <div class="modal-actions"><button class="ghost" data-act="cancel">Bekor qilish</button></div>`,
+      <h2>${t('room.searching')}</h2>
+      <p>${t('room.searchingText')}</p>
+      <div class="modal-actions"><button class="ghost" data-act="cancel">${t('common.cancel')}</button></div>`,
       (act) => {
         if (act === 'cancel') {
           hideModal();
@@ -212,15 +214,19 @@ const net = new OnlineClient({
     setClosingConfirmation(false);
     setMainButton({ show: false });
     goto('screen-online');
-    toast(`${msg} — yangi xona oching`, 'bad', 5000);
+    toast(t('msg.roomGone', { msg }), 'bad', 5000);
   },
   onDisconnected: () => {
-    if (S.mode === 'online' && S.online.inGame) toast('Aloqa uzildi — qayta ulanmoqda...', 'bad');
+    if (S.mode === 'online' && S.online.inGame) toast(t('msg.reconnecting'), 'bad');
   },
 });
 
 // ---------------------------------------------------------------- boshlang'ich UI
 async function init() {
+  // Til birinchi bo'lib tanlanadi — hamma matn shundan keyin chiziladi
+  initLang({ telegramLang: tgLanguage() });
+  onLangChange(() => refreshUi());
+
   renderMenuMaps();
   renderMapList($('#offlineMaps'), 'offline');
   renderMapList($('#onlineMaps'), 'online');
@@ -253,6 +259,7 @@ async function init() {
   $('#shopBtn').addEventListener('click', () => goto('screen-shop'));
   $('#friendsBtn').addEventListener('click', () => goto('screen-friends'));
   $('#mineBtn').addEventListener('click', () => goto('screen-wardrobe'));
+  $('#langBtn').addEventListener('click', showLangPicker);
   onOpenFriends(() => goto('screen-friends'));
   wardrobeLinks({ shop: () => goto('screen-shop'), friends: () => goto('screen-friends') });
   $('#helpBtn').addEventListener('click', showHelp);
@@ -287,7 +294,7 @@ async function init() {
     if (name) {
       nameInput.value = name;
       nameInput.readOnly = true;
-      nameInput.title = 'Ism Telegram profilingizdan olinadi';
+      nameInput.title = t('online.yourName');
       localStorage.setItem('il_name', name);
     }
   }
@@ -299,8 +306,8 @@ async function init() {
     S.mode = 'online';
     goto('screen-online');
     $('#joinCode').value = invited;
-    toast('Xonaga qo\'shilmoqda...');
-    net.join({ code: invited, name: myName() }).catch(() => toast('Serverga ulanib bo\'lmadi', 'bad'));
+    toast(t('msg.joining'));
+    net.join({ code: invited, name: myName() }).catch(() => toast(t('msg.noConnection'), 'bad'));
     return;
   }
 
@@ -311,11 +318,29 @@ async function init() {
   }
 }
 
+/** Til almashganda ekrandagi hamma narsani qayta chizadi. */
+function refreshUi() {
+  applyStatic();
+  renderMenuMaps();
+  renderMapList($('#offlineMaps'), 'offline');
+  renderMapList($('#onlineMaps'), 'online');
+  renderRules($('#offlineRules'), S.offline.rules, false);
+  renderRules($('#onlineRules'), S.online.rules, true);
+  renderPlayerInputs();
+  renderMenuPromo($('#menuPromo'));
+  if ($('#screen-shop').classList.contains('active')) renderShop();
+  if ($('#screen-friends').classList.contains('active')) renderFriends();
+  if ($('#screen-wardrobe').classList.contains('active')) renderWardrobe();
+  // Kutish oynasi ochiq bo'lsa u ham yangi tilda chiziladi
+  if (S.mode === 'online' && S.online.room && !S.online.inGame) showWaitingRoom(S.online.room);
+  view.render();
+}
+
 function renderMenuMaps() {
   $('#menuMaps').innerHTML = MAPS.map((m) => `
     <div class="map-chip">
-      <b>${escapeHtml(m.name)}</b>
-      <span>${m.cols}×${m.rows} = ${mapSize(m)} katak · ${Object.keys(m.ladders).length} narvon · ${Object.keys(m.snakes).length} ilon</span>
+      <b>${escapeHtml(mapText(m))}</b>
+      <span>${m.cols}×${m.rows} = ${t('game.cells', { n: mapSize(m) })} · ${Object.keys(m.ladders).length} 🪜 · ${Object.keys(m.snakes).length} 🐍</span>
     </div>`).join('');
 }
 
@@ -329,8 +354,8 @@ function renderMapList(root, which) {
     btn.innerHTML = `
       <span class="thumb" style="background:linear-gradient(140deg, ${m.theme.accent}, ${m.theme.dark})">${m.cols}×${m.rows}</span>
       <span>
-        <b>${escapeHtml(m.name)} · ${mapSize(m)} katak</b>
-        <span>${escapeHtml(m.about)}</span>
+        <b>${escapeHtml(mapText(m))} · ${t('game.cells', { n: mapSize(m) })}</b>
+        <span>${escapeHtml(mapText(m, 'about'))}</span>
       </span>`;
     btn.addEventListener('click', () => {
       S[which].mapId = m.id;
@@ -348,7 +373,7 @@ function renderRules(root, rules, isOnline) {
     label.className = 'rule';
     label.innerHTML = `
       <input type="checkbox" ${rules[info.key] ? 'checked' : ''} />
-      <span>${escapeHtml(info.title)}<small>${escapeHtml(info.note)}</small></span>`;
+      <span>${escapeHtml(t(`rule.${info.key}.title`))}<small>${escapeHtml(t(`rule.${info.key}.note`))}</small></span>`;
     label.querySelector('input').addEventListener('change', (e) => {
       rules[info.key] = e.target.checked;
     });
@@ -377,7 +402,7 @@ function renderPlayerInputs() {
     row.className = 'player-row';
     row.innerHTML = `
       <span class="swatch" style="background:${PLAYER_COLORS[i].hex}"></span>
-      <input class="text-input" maxlength="16" placeholder="${PLAYER_COLORS[i].name} o'yinchi" />`;
+      <input class="text-input" maxlength="16" placeholder="${t(`color.${PLAYER_COLORS[i].id}`)} ${t('offline.player')}" />`;
     const input = row.querySelector('input');
     input.value = saved[i] ?? S.offline.names[i] ?? '';
     input.addEventListener('input', () => {
@@ -398,7 +423,7 @@ function startOffline() {
   const inputs = [...$('#playerInputs').querySelectorAll('input')];
   const players = inputs.map((input, i) => ({
     id: `p${i + 1}`,
-    name: input.value.trim() || `${PLAYER_COLORS[i].name} o'yinchi`,
+    name: input.value.trim() || `${t(`color.${PLAYER_COLORS[i].id}`)} ${t('offline.player')}`,
     colorId: PLAYER_COLORS[i].id,
   }));
 
@@ -442,18 +467,18 @@ async function createRoom() {
       name: myName(), mapId: S.online.mapId, rules: S.online.rules, capacity: S.online.capacity,
     });
   } catch {
-    toast('Serverga ulanib bo\'lmadi', 'bad');
+    toast(t('msg.noConnection'), 'bad');
   }
 }
 
 async function joinRoom() {
   const code = $('#joinCode').value.trim().toUpperCase();
-  if (code.length !== 4) return toast('Xona kodi 4 ta belgidan iborat', 'bad');
+  if (code.length !== 4) return toast(t('msg.codeLength'), 'bad');
   S.mode = 'online';
   try {
     await net.join({ code, name: myName() });
   } catch {
-    toast('Serverga ulanib bo\'lmadi', 'bad');
+    toast(t('msg.noConnection'), 'bad');
   }
 }
 
@@ -462,7 +487,7 @@ async function quickMatch() {
   try {
     await net.quick({ name: myName(), mapId: S.online.mapId, rules: S.online.rules });
   } catch {
-    toast('Serverga ulanib bo\'lmadi', 'bad');
+    toast(t('msg.noConnection'), 'bad');
   }
 }
 
@@ -494,28 +519,28 @@ function applyRoom(room) {
   }
 
   const offlinePeer = room.players.find((p) => !p.online);
-  if (offlinePeer) $('#rollHint').textContent = `${offlinePeer.name} aloqadan uzilgan...`;
+  if (offlinePeer) $('#rollHint').textContent = t('room.disconnected', { name: offlinePeer.name });
 }
 
 function showWaitingRoom(room) {
   const capacity = room.capacity || 2;
-  const list = room.players.map((p) => `${escapeHtml(p.name)}${p.online ? '' : ' (uzilgan)'}`).join(', ');
+  const list = room.players.map((p) => `${escapeHtml(p.name)}${p.online ? '' : ` (${t('online.lost')})`}`).join(', ');
   const iAmHost = S.online.mySeat === 0;
   const canStart = iAmHost && room.canStartEarly;
 
   showModal(`
-    <h2>Xona tayyor</h2>
-    <p>Do'stlaringizga shu kodni yuboring — ular "Kod bilan qo'shilish" bo'limiga kiritadi.</p>
-    <div class="code-big" data-act="copy" title="Nusxalash">${room.code}</div>
-    <p>Xarita: <b>${escapeHtml(getMap(room.mapId).name)}</b><br>
-    O'yinchilar (${room.players.length}/${capacity}): ${list}</p>
-    ${canStart ? '<p class="muted">Hamma yig\'ilishini kutmasdan boshlasangiz ham bo\'ladi.</p>' : ''}
+    <h2>${t('room.ready')}</h2>
+    <p>${t('room.sendCode')}</p>
+    <div class="code-big" data-act="copy" title="${t('common.copy')}">${room.code}</div>
+    <p>${t('room.map')}: <b>${escapeHtml(mapText(getMap(room.mapId)))}</b><br>
+    ${t('room.players')} (${room.players.length}/${capacity}): ${list}</p>
+    ${canStart ? `<p class="muted">${t('room.startEarlyHint')}</p>` : ''}
     <div class="modal-actions">
-      ${canStart ? '<button class="primary" data-act="start">Hozir boshlash</button>' : ''}
-      <button class="primary" data-act="invite">Do'stni chaqirish</button>
-      <button class="ghost" data-act="copy">Kodni nusxalash</button>
-      ${canPromote() ? '<button class="ghost" data-act="tg-invite">Telegram havolasi</button>' : ''}
-      <button class="ghost" data-act="cancel">Bekor qilish</button>
+      ${canStart ? `<button class="primary" data-act="start">${t('room.startNow')}</button>` : ''}
+      <button class="primary" data-act="invite">${t('room.invite')}</button>
+      <button class="ghost" data-act="copy">${t('room.copyCode')}</button>
+      ${canPromote() ? `<button class="ghost" data-act="tg-invite">${t('room.tgLink')}</button>` : ''}
+      <button class="ghost" data-act="cancel">${t('common.cancel')}</button>
     </div>`, (act) => {
     if (act === 'start') {
       net.start();
@@ -524,16 +549,16 @@ function showWaitingRoom(room) {
     if (act === 'tg-invite') {
       const link = telegramAppLink(room.code);
       navigator.clipboard?.writeText(link).then(
-        () => toast('Telegram havolasi nusxalandi'),
+        () => toast(t('msg.tgLinkCopied')),
         () => toast(link),
       );
     }
     if (act === 'invite') {
       const how = shareRoom(room.code);
-      if (how === 'clipboard') toast('Taklif havolasi nusxalandi');
+      if (how === 'clipboard') toast(t('msg.inviteCopied'));
     }
     if (act === 'copy') {
-      navigator.clipboard?.writeText(room.code).then(() => toast('Kod nusxalandi'), () => toast(`Kod: ${room.code}`));
+      navigator.clipboard?.writeText(room.code).then(() => toast(t('msg.codeCopied')), () => toast(t('msg.code', { code: room.code })));
     }
     if (act === 'cancel') {
       hideModal();
@@ -546,7 +571,7 @@ function showWaitingRoom(room) {
 function onlineRematch() {
   hideModal();
   net.rematch();
-  toast("Qayta o'ynash so'raldi — raqib tasdiqlashi kerak");
+  toast(t('msg.rematchAsked'));
 }
 
 // ---------------------------------------------------------------- umumiy
@@ -572,23 +597,23 @@ function setConn(text, kind) {
 
 function showHelp() {
   showModal(`
-    <h2>Qoidalar</h2>
+    <h2>${t('rules.title')}</h2>
     <ul>
-      <li>Har bir o'yinchi navbat bilan zar tashlaydi va donasini shuncha katak oldinga suradi.</li>
-      <li><b>Narvon</b> (🪜 yashil) tepasiga ko'taradi, <b>ilon</b> (🐍) boshiga tushsangiz dumigacha tushirasiz.</li>
-      <li><b>★ bonus</b> katak qo'shimcha zar beradi, <b>✖ tuzoq</b> katak bir yurishni o'tkazib yuboradi.</li>
-      <li>6 tashlagan o'yinchi yana zar tashlaydi. Ketma-ket 3 ta 6 — yurish bekor bo'ladi.</li>
-      <li>Finishga aniq tushish kerak: ortiqcha qadamlar orqaga qaytaradi.</li>
-      <li>Birinchi bo'lib oxirgi katakka yetgan o'yinchi g'olib.</li>
+      <li>${t('rules.l1')}</li>
+      <li>${t('rules.l2')}</li>
+      <li>${t('rules.l3')}</li>
+      <li>${t('rules.l4')}</li>
+      <li>${t('rules.l5')}</li>
+      <li>${t('rules.l6')}</li>
     </ul>
-    <h2 style="font-size:17px;margin-top:18px">Rejimlar</h2>
+    <h2 style="font-size:17px;margin-top:18px">${t('rules.modes')}</h2>
     <ul>
-      <li><b>Onlayn:</b> 2 dan 4 kishigacha, real vaqtda. Xona kodi yoki tezkor juftlash orqali. Aloqa uzilsa 60 soniya ichida qaytish mumkin.</li>
-      <li><b>Oflayn:</b> bitta qurilmada 2–6 kishi navbat bilan.</li>
+      <li>${t('rules.online')}</li>
+      <li>${t('rules.offline')}</li>
     </ul>
-    <p style="margin-top:14px">Zar tashlash uchun <b>Bo'sh joy</b> tugmasini ham bosish mumkin.</p>
-    <p class="muted" style="font-size:11px">Versiya: ${escapeHtml(appVersion() || '—')}</p>
-    <div class="modal-actions"><button class="primary" data-act="ok">Tushunarli</button></div>`,
+    <p style="margin-top:14px">${t('rules.space')}</p>
+    <p class="muted" style="font-size:11px">${escapeHtml(t('rules.version', { v: appVersion() || '—' }))}</p>
+    <div class="modal-actions"><button class="primary" data-act="ok">${t('common.gotIt')}</button></div>`,
     () => hideModal());
 }
 

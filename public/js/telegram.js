@@ -82,6 +82,11 @@ export function tgUserName() {
   return [u.first_name, u.last_name].filter(Boolean).join(' ').trim() || u.username || null;
 }
 
+/** Telegram profilidagi til kodi (masalan "ru"). Bo'lmasa null. */
+export function tgLanguage() {
+  return sdk()?.initDataUnsafe?.user?.language_code || null;
+}
+
 /** Serverga yuboriladigan imzolangan satr — server uni bot token bilan tekshiradi. */
 export function initData() {
   return sdk()?.initData || '';

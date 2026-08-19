@@ -115,6 +115,7 @@ export class Store {
         equipped: defaultEquipped(),
         starsSpent: 0,
         name: null,           // admin panelida tanib olish uchun
+        lang: null,           // bot xabarlari shu tilda yuboriladi
         firstSeen: new Date().toISOString(),
         lastSeen: new Date().toISOString(),
         played: false,        // kamida bitta o'yin o'ynadimi
@@ -131,14 +132,20 @@ export class Store {
     return u;
   }
 
-  /** O'yinchi ilovaga kirdi — ismini va oxirgi kirish vaqtini yangilaymiz. */
-  touch(tgId, name) {
+  /** O'yinchi ilovaga kirdi — ismi, tili va oxirgi kirish vaqti yangilanadi. */
+  touch(tgId, name, lang = null) {
     const u = this.user(tgId);
     const clean = String(name || '').trim().slice(0, 64);
     if (clean && u.name !== clean) u.name = clean;
+    if (lang && u.lang !== lang) u.lang = lang;
     u.lastSeen = new Date().toISOString();
     this.saveSoon();
     return u;
+  }
+
+  /** O'yinchining tili (bilinmasa null). */
+  langOf(tgId) {
+    return this.data.users[String(tgId)]?.lang || null;
   }
 
   // ---------------------------------------------------------------- do'st chaqirish
@@ -286,6 +293,7 @@ export class Store {
     const rows = Object.entries(this.data.users).map(([tgId, u]) => ({
       tgId,
       name: u.name || null,
+      lang: u.lang || null,
       played: Boolean(u.played),
       starsSpent: u.starsSpent || 0,
       owned: u.owned.length,

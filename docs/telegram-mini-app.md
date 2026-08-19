@@ -72,6 +72,13 @@ Buni Render'da alohida **Background Worker** sifatida ishga tushirsangiz bo'ladi
 (Start Command: `npm run bot`). Bot bo'lmasa ham Mini App ishlaydi — u faqat
 `/start` tugmasi va inline taklif uchun kerak.
 
+## Tillar
+
+Mini App o'zbek, rus va ingliz tillarida ishlaydi. Til Telegram profilidagi
+`language_code` bo'yicha avtomatik tanlanadi, o'yinchi uni yuqoridagi tugma orqali
+almashtira oladi. Bot ham xabarlarini o'sha tilda yozadi, xarid oynasidagi
+ko'rinish nomi ham tarjima qilinadi.
+
 ## Telegram ichida nima o'zgaradi
 
 | Xususiyat | Tafsilot |

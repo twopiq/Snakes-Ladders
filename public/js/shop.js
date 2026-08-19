@@ -6,16 +6,17 @@
  * (pullik narsalar "Telegram'da ochiladi" deb ko'rsatiladi).
  */
 
-import { SLOTS, SLOT_NAMES, RARITY, defaultEquipped, getItem } from '../shared/cosmetics.js';
+import { SLOTS, RARITY, defaultEquipped, getItem } from '../shared/cosmetics.js';
 import { drawItemPreview } from './preview.js';
 import { isTelegram, initData, openInvoice, haptic, tgConfig, pendingRef, settleRef } from './telegram.js';
-import { canPromote, openTelegramApp, LOCK_LABEL } from './promo.js';
+import { canPromote, openTelegramApp } from './promo.js';
 import { $, toast, showModal, hideModal } from './ui.js';
 import { escapeHtml } from './game-view.js';
+import { t, itemText } from '../shared/i18n.js';
 
 const EQUIP_KEY = 'il_equipped';
 const TABS = [...SLOTS, 'bundle'];
-const TAB_NAMES = { ...SLOT_NAMES, bundle: "To'plamlar" };
+const tabName = (slot) => t(`slot.${slot}`);
 
 const state = {
   items: [],
@@ -95,7 +96,7 @@ export async function loadShop({ silent = true } = {}) {
     state.loaded = true;
     onChange(state.equipped);
   } catch {
-    if (!silent) toast("Do'konni yuklab bo'lmadi", 'bad');
+    if (!silent) toast(t('msg.shopLoadFail'), 'bad');
   }
   return state;
 }
@@ -107,16 +108,16 @@ export function renderShop() {
   if (!root) return;
 
   $('#shopStars').textContent = isTelegram() && state.loaded
-    ? `⭐ ${state.starsSpent} sarflangan`
+    ? t('shop.spent', { n: state.starsSpent })
     : '';
 
   const note = $('#shopNote');
   if (!isTelegram()) {
     note.classList.remove('hidden');
     note.innerHTML = canPromote()
-      ? `Pullik ko'rinishlar Telegram Stars (⭐) orqali sotiladi — xarid faqat Telegram ilovasida ishlaydi.
-         <button class="link-btn" type="button" data-open-tg="1">Telegram'da ochish →</button>`
-      : "Pullik ko'rinishlar Telegram ilovasi ichida sotiladi. Bepul variantlar bu yerda ham tanlanadi.";
+      ? `${t('shop.siteNote')}
+         <button class="link-btn" type="button" data-open-tg="1">${t('common.openInTelegram')} →</button>`
+      : t('shop.siteNotePlain');
     for (const el of note.querySelectorAll('[data-open-tg]')) {
       el.addEventListener('click', () => openTelegramApp());
     }
@@ -125,8 +126,8 @@ export function renderShop() {
   }
 
   // bo'limlar
-  $('#shopTabs').innerHTML = TABS.map((t) => `
-    <button class="tab shop-tab ${t === state.tab ? 'active' : ''}" data-shop-tab="${t}">${escapeHtml(TAB_NAMES[t])}</button>
+  $('#shopTabs').innerHTML = TABS.map((slot) => `
+    <button class="tab shop-tab ${slot === state.tab ? 'active' : ''}" data-shop-tab="${slot}">${escapeHtml(tabName(slot))}</button>
   `).join('');
   for (const btn of document.querySelectorAll('[data-shop-tab]')) {
     btn.addEventListener('click', () => {
@@ -193,7 +194,7 @@ export async function equipSet(itemId) {
       if (!res.ok) throw new Error(data.error);
       state.equipped = { ...defaultEquipped(), ...data.equipped };
     } catch (err) {
-      toast(err.message || "Kiyib bo'lmadi", 'bad');
+      toast(err.message || t('msg.wearFail'), 'bad');
     }
   } else {
     saveLocalEquipped();
@@ -201,7 +202,7 @@ export async function equipSet(itemId) {
 
   onChange(state.equipped);
   renderShop();
-  toast(`${item?.name || "To'plam"} kiyildi`);
+  toast(t('msg.wornOk', { name: itemText(item) || t('slot.bundle') }));
 }
 
 function card(item) {
@@ -212,30 +213,30 @@ function card(item) {
 
   let action;
   const locked = canPromote()
-    ? `<button class="ghost tg-open" data-open-tg="1">⭐ ${item.price} · ${LOCK_LABEL}</button>`
-    : `<button class="ghost" disabled title="Telegram ilovasida sotiladi">⭐ ${item.price} · Telegram'da</button>`;
+    ? `<button class="ghost tg-open" data-open-tg="1">⭐ ${item.price} · ${t('common.openInTelegram')}</button>`
+    : `<button class="ghost" disabled>${t('shop.inTelegram', { price: item.price })}</button>`;
 
   // Mukofot ko'rinishlari sotilmaydi — faqat do'st chaqirib olinadi
   if (item.unlock?.type === 'referral' && !isOwned) {
-    action = `<button class="ghost reward-btn" data-friends="1">🎁 ${item.unlock.count} ta do'st chaqiring</button>`;
+    action = `<button class="ghost reward-btn" data-friends="1">${t('shop.rewardBtn', { n: item.unlock.count })}</button>`;
   } else if (isOwned && item.slot === 'bundle') {
     action = allWorn(item)
-      ? '<span class="shop-owned">Kiyilgan ✓</span>'
-      : `<button class="ghost" data-equip-set="${item.id}">Hammasini kiyish</button>`;
+      ? `<span class="shop-owned">${t('shop.worn')}</span>`
+      : `<button class="ghost" data-equip-set="${item.id}">${t('shop.wearAll')}</button>`;
   } else if (isEquipped) {
-    action = '<span class="shop-owned">Kiyilgan ✓</span>';
+    action = `<span class="shop-owned">${t('shop.worn')}</span>`;
   } else if (isOwned) {
-    action = `<button class="ghost" data-equip="${item.id}" data-slot="${item.slot}">Kiyish</button>`;
+    action = `<button class="ghost" data-equip="${item.id}" data-slot="${item.slot}">${t('shop.wear')}</button>`;
   } else if (canBuyHere) {
     action = item.slot === 'bundle'
-      ? `<button class="primary" data-buy="${item.id}">⭐ ${item.price} — olish</button>`
+      ? `<button class="primary" data-buy="${item.id}">${t('shop.buy', { price: item.price })}</button>`
       : `<button class="primary" data-buy="${item.id}">⭐ ${item.price}</button>`;
   } else {
     action = locked;
   }
 
   const bundleList = item.grants
-    ? `<small class="bundle-list">${item.grants.map((g) => escapeHtml(getItem(g)?.name || g)).join(' · ')}</small>`
+    ? `<small class="bundle-list">${item.grants.map((g) => escapeHtml(itemText(getItem(g)) || g)).join(' · ')}</small>`
     : '';
 
   return `
@@ -246,9 +247,9 @@ function card(item) {
           : `<canvas data-preview="${item.id}"></canvas>`
       }</div>
       <div class="shop-info">
-        <b>${escapeHtml(item.name)}${item.unlock ? ' 🎁' : ''}</b>
-        <span class="rarity" style="color:${rarity.color}">${escapeHtml(rarity.name)}</span>
-        <small>${escapeHtml(item.about || '')}</small>
+        <b>${escapeHtml(itemText(item))}${item.unlock ? ' 🎁' : ''}</b>
+        <span class="rarity" style="color:${rarity.color}">${escapeHtml(t(`rarity.${item.rarity}`))}</span>
+        <small>${escapeHtml(itemText(item, 'about'))}</small>
         ${bundleList}
       </div>
       <div class="shop-action">${action}</div>
@@ -258,7 +259,7 @@ function card(item) {
 // ---------------------------------------------------------------- amallar
 
 export async function equip(slot, itemId) {
-  if (!owns(itemId)) return toast("Bu ko'rinish hali sizda yo'q", 'bad');
+  if (!owns(itemId)) return toast(t('msg.notOwned'), 'bad');
   state.equipped[slot] = itemId;
   haptic('light');
 
@@ -273,7 +274,7 @@ export async function equip(slot, itemId) {
       if (!res.ok) throw new Error(data.error);
       state.equipped = { ...defaultEquipped(), ...data.equipped };
     } catch (err) {
-      toast(err.message || 'Kiyib bo\'lmadi', 'bad');
+      toast(err.message || t('msg.wearFail'), 'bad');
     }
   } else {
     saveLocalEquipped();
@@ -281,7 +282,7 @@ export async function equip(slot, itemId) {
 
   onChange(state.equipped);
   renderShop();
-  toast(`${getItem(itemId)?.name} kiyildi`);
+  toast(t('msg.wornOk', { name: itemText(getItem(itemId)) }));
 }
 
 async function buy(itemId) {
@@ -290,10 +291,9 @@ async function buy(itemId) {
 
   if (!isTelegram()) {
     return showModal(`
-      <h2>Telegram kerak</h2>
-      <p>Ko'rinishlar Telegram Stars (⭐) orqali sotiladi, shuning uchun xarid faqat
-      Telegram ilovasi ichida ishlaydi. O'yinni Telegram'da oching va do'konga kiring.</p>
-      <div class="modal-actions"><button class="primary" data-act="ok">Tushunarli</button></div>`,
+      <h2>${t('shop.needTelegram')}</h2>
+      <p>${t('shop.needTelegramText')}</p>
+      <div class="modal-actions"><button class="primary" data-act="ok">${t('common.gotIt')}</button></div>`,
       () => hideModal());
   }
 
@@ -309,19 +309,19 @@ async function buy(itemId) {
     const status = await openInvoice(data.link);
     if (status === 'paid') {
       haptic('success');
-      toast('Xarid muvaffaqiyatli! Ochilmoqda...');
+      toast(t('msg.buyOk'));
       await waitForItem(itemId);
       renderShop();
     } else if (status === 'cancelled') {
-      toast('Xarid bekor qilindi');
+      toast(t('msg.buyCancelled'));
     } else if (status === 'unsupported') {
-      toast("Telegram ilovangiz eskiroq — yangilang", 'bad');
+      toast(t('msg.oldTelegram'), 'bad');
     } else if (status !== 'pending') {
       haptic('error');
-      toast("To'lov amalga oshmadi", 'bad');
+      toast(t('msg.payFail'), 'bad');
     }
   } catch (err) {
-    toast(err.message || 'Xatolik', 'bad');
+    toast(err.message || t('common.error'), 'bad');
   }
 }
 
@@ -337,6 +337,6 @@ async function waitForItem(itemId, tries = 6) {
     }
     await new Promise((r) => setTimeout(r, 900));
   }
-  toast("Xarid qayd etildi, lekin ro'yxat yangilanmadi — do'konni qayta oching", 'bad');
+  toast(t('msg.buyNotSynced'), 'bad');
   return false;
 }

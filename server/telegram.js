@@ -9,6 +9,7 @@
  */
 
 import crypto from 'node:crypto';
+import { detectLang } from '../public/shared/i18n.js';
 
 const BOT_TOKEN = (process.env.BOT_TOKEN || '').trim();
 const BOT_USERNAME = (process.env.BOT_USERNAME || '').trim().replace(/^@/, '');
@@ -120,6 +121,8 @@ export function verifyInitData(initData, { botToken = BOT_TOKEN, maxAgeSec = MAX
       name: [user.first_name, user.last_name].filter(Boolean).join(' ').trim() || user.username || 'Telegram',
       username: user.username || null,
       photo: user.photo_url || null,
+      // Telegram profilidagi til — bot xabarlarini shu tilda yozamiz
+      lang: detectLang([user.language_code]),
     },
   };
 }
