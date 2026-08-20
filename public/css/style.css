@@ -176,6 +176,10 @@ body {
   border-radius: var(--radius);
   padding: 18px;
 }
+/* Ekran ichidagi panellar ketma-ket kelganda orasida bo'shliq qolsin */
+#wardrobeBody,
+#friendsBody { display: grid; gap: 14px; }
+
 .panel h3 { margin: 4px 0 12px; font-size: 15px; color: var(--accent); }
 .panel h3:not(:first-child) { margin-top: 22px; }
 .muted { color: var(--muted); font-size: 13px; margin: 0 0 12px; line-height: 1.5; }
@@ -867,7 +871,7 @@ a:hover { color: #7dd3fc; }
   transition: width .4s ease;
 }
 
-.reward-list { display: grid; gap: 10px; margin-top: 14px; }
+.reward-list { display: grid; gap: 10px; }
 
 .reward {
   display: grid;
