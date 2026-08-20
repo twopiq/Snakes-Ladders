@@ -16,6 +16,7 @@ import {
 import { $, $$, showScreen, toast, showModal, hideModal } from './ui.js';
 import { t, mapText, itemText } from '../shared/i18n.js';
 import { initLang, showLangPicker, applyStatic } from './lang.js';
+import { initMenu, closeMenu, setSoundState } from './menu.js';
 import { onLangChange } from '../shared/i18n.js';
 
 // Qoidalar ro'yxati — matnlari lug'atdan olinadi (rule.<key>.title / .note)
@@ -49,6 +50,7 @@ const S = {
 
 /** Ekranni almashtiradi va Telegram'ning "orqaga" tugmasini moslaydi. */
 function goto(screenId) {
+  closeMenu();
   showScreen(screenId);
   if (screenId === 'screen-shop') {
     renderShop();
@@ -263,14 +265,9 @@ async function init() {
   onOpenFriends(() => goto('screen-friends'));
   wardrobeLinks({ shop: () => goto('screen-shop'), friends: () => goto('screen-friends') });
   $('#helpBtn').addEventListener('click', showHelp);
-  const soundBtn = $('#soundBtn');
-  soundBtn.classList.toggle('off', !sound.enabled);
-  soundBtn.addEventListener('click', () => {
-    const on = sound.toggle();
-    soundBtn.classList.toggle('off', !on);
-    soundBtn.textContent = on ? '🔊' : '🔇';
-  });
-  soundBtn.textContent = sound.enabled ? '🔊' : '🔇';
+  initMenu();
+  setSoundState(sound.enabled);
+  $('#soundBtn').addEventListener('click', () => setSoundState(sound.toggle()));
 
   $('#overlay').addEventListener('click', (e) => {
     if (e.target.id === 'overlay') hideModal();

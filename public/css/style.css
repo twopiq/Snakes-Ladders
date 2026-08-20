@@ -23,6 +23,8 @@ html, body {
 }
 
 body {
+  /* Tor telefonda sahifa hech qachon yon tomonga surilmasin */
+  overflow-x: hidden;
   background:
     radial-gradient(1100px 600px at 15% -10%, #1e3a5f 0%, transparent 60%),
     radial-gradient(900px 500px at 100% 0%, #1f2b4d 0%, transparent 55%),
@@ -33,6 +35,7 @@ body {
 }
 
 .app {
+  width: 100%;
   max-width: 1240px;
   margin: 0 auto;
   padding: 0 14px 40px;
@@ -60,11 +63,21 @@ body {
   font: inherit;
 }
 
-.brand-mark { font-size: 30px; }
-.brand strong { display: block; font-size: 17px; }
+.brand { min-width: 0; }
+.brand > span:last-child { min-width: 0; }
+.brand-mark { font-size: 30px; flex: none; }
+.brand strong,
+.brand small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.brand strong { font-size: 17px; }
 .brand small { color: var(--muted); font-size: 12px; }
 
-.topbar-actions { display: flex; gap: 8px; }
+.topbar-actions { position: relative; display: flex; gap: 8px; flex: none; }
+.menu-btn { font-size: 18px; line-height: 1; }
 
 .icon-btn {
   width: 38px;
@@ -1066,3 +1079,75 @@ button.primary.danger:hover { filter: brightness(1.06); }
 .lang-option.on { border-color: var(--accent-2); background: rgba(34, 197, 94, .10); }
 .lang-option span { color: var(--muted); font-size: 12px; }
 #langBtn { font-size: 12px; font-weight: 700; letter-spacing: .04em; }
+
+/* ---------- yuqoridagi menyu ---------- */
+.app-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 40;
+  min-width: 232px;
+  max-width: calc(100vw - 28px);
+  padding: 8px;
+  display: grid;
+  gap: 2px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+}
+
+.app-menu-item {
+  display: grid;
+  grid-template-columns: 26px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.app-menu-item:hover { background: var(--panel-2); }
+.app-menu-item b { font-weight: 600; font-size: 14px; }
+.app-menu-item .mi-icon { font-size: 17px; text-align: center; }
+.app-menu-item .mi-state { color: var(--muted); font-size: 12px; }
+.app-menu-item.off .mi-icon { opacity: .45; }
+
+.app-menu-side {
+  margin-top: 6px;
+  padding: 10px 10px 6px;
+  border-top: 1px solid var(--line);
+}
+.app-menu-side > small { color: var(--muted); font-size: 11px; }
+.side-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-top: 8px;
+}
+.side-toggle button {
+  padding: 8px 6px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.side-toggle button:hover { border-color: var(--accent); }
+.side-toggle button.on {
+  border-color: var(--accent-2);
+  background: rgba(34, 197, 94, .12);
+  color: var(--text);
+}
+
+/* Menyu chap tomonda bo'lsa: tugma chapga, ro'yxat ham chapga tekislanadi */
+body[data-menu-side="left"] .topbar { flex-direction: row-reverse; }
+body[data-menu-side="left"] .brand { flex-direction: row-reverse; text-align: right; }
+body[data-menu-side="left"] .app-menu { right: auto; left: 0; }

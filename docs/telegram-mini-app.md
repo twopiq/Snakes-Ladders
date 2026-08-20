@@ -85,6 +85,7 @@ ko'rinish nomi ham tarjima qilinadi.
 |---|---|
 | Ism | Telegram profilidan olinadi, o'zgartirib bo'lmaydi (server imzoni tekshiradi) |
 | Zar tugmasi | Telegram'ning pastki asosiy tugmasiga chiqadi — har doim ko'rinib turadi |
+| Boshqaruv | Barcha tugmalar yuqoridagi bitta ☰ menyusida — tor ekranda ular sig'may qolmaydi. Menyuni chapga yoki o'ngga ko'chirish mumkin |
 | Orqaga | Telegram'ning o'z "orqaga" tugmasi ishlaydi. O'yin davom etayotgan bo'lsa avval tasdiq so'raydi — tasodifan bosilib o'yindan chiqib ketilmaydi |
 | Tebranish | Zar, narvon, ilon, g'alaba — har biriga alohida haptik javob |
 | Taklif | "Do'stni chaqirish" tugmasi Telegram ulashish oynasini ochadi |

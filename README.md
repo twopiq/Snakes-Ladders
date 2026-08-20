@@ -200,6 +200,9 @@ Ko'p kishilik xonada ekran serverdan orqada qolmasligi uchun:
 
 ## Boshqaruv
 
+- Yuqoridagi **☰** tugmasi butun boshqaruvni ochadi: do'stlar, mening ko'rinishlarim,
+  do'kon, ovoz, til va qoidalar. Ro'yxat oxirida menyuni **chapga yoki o'ngga**
+  ko'chirish mumkin — tanlov eslab qolinadi (bir qo'l bilan ushlaganda qulay bo'lsin).
 - **Zar tashlash** tugmasi yoki **Bo'sh joy / Enter** tugmalari.
 - O'yin davom etayotganda chiqishdan oldin tasdiq so'raladi (Telegram'ning
   "orqaga" tugmasi ham shu yo'ldan o'tadi — tasodifan bosilib chiqib ketilmaydi).

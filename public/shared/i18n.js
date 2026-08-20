@@ -45,6 +45,12 @@ const T = {
   'top.sound': { uz: 'Ovoz', ru: 'Звук', en: 'Sound' },
   'top.rules': { uz: 'Qoidalar', ru: 'Правила', en: 'Rules' },
   'top.lang': { uz: 'Til', ru: 'Язык', en: 'Language' },
+  'top.menu': { uz: 'Menyu', ru: 'Меню', en: 'Menu' },
+  'menu.side': { uz: 'Menyu joyi', ru: 'Расположение меню', en: 'Menu position' },
+  'menu.side.left': { uz: 'Chapda', ru: 'Слева', en: 'Left' },
+  'menu.side.right': { uz: "O'ngda", ru: 'Справа', en: 'Right' },
+  'sound.on': { uz: 'yoqilgan', ru: 'включён', en: 'on' },
+  'sound.off': { uz: "o'chirilgan", ru: 'выключен', en: 'off' },
 
   // ---------------------------------------------------------------- menyu
   'menu.lead': {

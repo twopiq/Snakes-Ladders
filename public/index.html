@@ -34,12 +34,38 @@
       </span>
     </button>
     <div class="topbar-actions">
-      <button class="icon-btn" id="friendsBtn" type="button" data-i18n-title="top.friends" title="Do'stlar">👥</button>
-      <button class="icon-btn" id="mineBtn" type="button" data-i18n-title="top.mine" title="Mening ko'rinishlarim">🎨</button>
-      <button class="icon-btn" id="shopBtn" type="button" data-i18n-title="top.shop" title="Do'kon">🛍</button>
-      <button class="icon-btn" id="soundBtn" type="button" data-i18n-title="top.sound" title="Ovoz">🔊</button>
-      <button class="icon-btn" id="langBtn" type="button" data-i18n-title="top.lang" title="Til">UZ</button>
-      <button class="icon-btn" id="helpBtn" type="button" data-i18n-title="top.rules" title="Qoidalar">?</button>
+      <button class="icon-btn menu-btn" id="menuBtn" type="button"
+              aria-haspopup="true" aria-expanded="false" aria-controls="appMenu"
+              data-i18n-title="top.menu" title="Menyu">☰</button>
+
+      <nav class="app-menu hidden" id="appMenu" aria-labelledby="menuBtn">
+        <button class="app-menu-item" id="friendsBtn" type="button">
+          <span class="mi-icon">👥</span><b data-i18n="top.friends">Do'stlar</b>
+        </button>
+        <button class="app-menu-item" id="mineBtn" type="button">
+          <span class="mi-icon">🎨</span><b data-i18n="top.mine">Mening ko'rinishlarim</b>
+        </button>
+        <button class="app-menu-item" id="shopBtn" type="button">
+          <span class="mi-icon">🛍</span><b data-i18n="top.shop">Do'kon</b>
+        </button>
+        <button class="app-menu-item" id="soundBtn" type="button">
+          <span class="mi-icon">🔊</span><b data-i18n="top.sound">Ovoz</b><small class="mi-state"></small>
+        </button>
+        <button class="app-menu-item" id="langBtn" type="button">
+          <span class="mi-icon">🌐</span><b data-i18n="top.lang">Til</b><small class="mi-state">UZ</small>
+        </button>
+        <button class="app-menu-item" id="helpBtn" type="button">
+          <span class="mi-icon">❓</span><b data-i18n="top.rules">Qoidalar</b>
+        </button>
+
+        <div class="app-menu-side">
+          <small data-i18n="menu.side">Menyu joyi</small>
+          <div class="side-toggle">
+            <button type="button" data-side="left" data-i18n="menu.side.left">Chapda</button>
+            <button type="button" data-side="right" data-i18n="menu.side.right">O'ngda</button>
+          </div>
+        </div>
+      </nav>
     </div>
   </header>
 

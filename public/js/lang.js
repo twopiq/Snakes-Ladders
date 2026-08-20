@@ -8,6 +8,7 @@
 
 import { LANGS, LANG_CODES, DEFAULT_LANG, t, setLang, getLang, onLangChange, detectLang } from '../shared/i18n.js';
 import { showModal, hideModal, $, $$ } from './ui.js';
+import { setLangState } from './menu.js';
 
 const KEY = 'il_lang';
 
@@ -48,8 +49,7 @@ export function applyStatic(root = document) {
   for (const el of $$('[data-i18n-title]', root)) el.title = t(el.dataset.i18nTitle);
   for (const el of $$('[data-i18n-aria]', root)) el.setAttribute('aria-label', t(el.dataset.i18nAria));
   document.documentElement.lang = getLang();
-  const btn = $('#langBtn');
-  if (btn) btn.textContent = (LANGS.find((l) => l.code === getLang()) || LANGS[0]).short;
+  setLangState((LANGS.find((l) => l.code === getLang()) || LANGS[0]).short);
 }
 
 /** Til tanlash oynasi. */
