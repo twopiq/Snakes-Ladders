@@ -271,7 +271,8 @@ export class Store {
     }
     // Yangi ochilgan narsa darhol kiyiladi — o'yinchi uni qidirib yurmasin
     if (added) this.equipIfDefault(tgId, itemId);
-    this.saveSoon();
+    // Egalik — muhim, kechiktirmasdan yozamiz (server istalgan payt to'xtashi mumkin)
+    this.saveNow();
     return added;
   }
 
@@ -295,7 +296,7 @@ export class Store {
       u.equipped[part.slot] = id;
       worn.push(id);
     }
-    if (worn.length) this.saveSoon();
+    if (worn.length) this.saveNow();
     return worn;
   }
 
@@ -397,7 +398,8 @@ export class Store {
       worn.push(id);
     }
     if (!worn.length) return { ok: false, error: 'Kiyish uchun narsa topilmadi' };
-    this.saveSoon();
+    // O'yinchining tanlovi — har safar qaytadan tanlab o'tirmasin
+    this.saveNow();
     return { ok: true, equipped: u.equipped, worn };
   }
 
@@ -409,7 +411,7 @@ export class Store {
     const u = this.user(tgId);
     if (!u.owned.includes(itemId)) return { ok: false, error: 'Bu ko\'rinish sizda yo\'q' };
     u.equipped[slot] = itemId;
-    this.saveSoon();
+    this.saveNow(); // tanlov darhol saqlanadi
     return { ok: true, equipped: u.equipped };
   }
 

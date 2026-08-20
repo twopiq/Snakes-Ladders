@@ -15,9 +15,13 @@
 
 const FILE_NAME = 'store.json';
 /** Ketma-ket o'zgarishlarni bitta yuborishga qo'shamiz. */
-const DEBOUNCE_MS = 20_000;
-/** Telegram'ni bezovta qilmaslik uchun eng qisqa oraliq. */
-const MIN_GAP_MS = 5 * 60 * 1000;
+const DEBOUNCE_MS = 15_000;
+/**
+ * Telegram'ni bezovta qilmaslik uchun eng qisqa oraliq.
+ * Qisqa bo'lgani yaxshi: server istalgan payt to'xtashi mumkin, oxirgi
+ * o'zgarish esa zaxiraga tushib ulgurishi kerak.
+ */
+const MIN_GAP_MS = 60_000;
 
 export function createBackup({ token, store, chatId, base = null }) {
   const API_BASE = base || process.env.TELEGRAM_API_BASE || 'https://api.telegram.org';

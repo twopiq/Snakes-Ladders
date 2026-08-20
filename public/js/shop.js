@@ -82,6 +82,8 @@ export async function loadShop({ silent = true } = {}) {
         state.starsSpent = data.starsSpent;
         state.starsEnabled = data.starsEnabled;
         state.loaded = true;
+        await restoreOwnChoice();
+        saveLocalEquipped(); // brauzerda ham nusxasi qolsin
         onChange(state.equipped);
         return state;
       }
@@ -99,6 +101,41 @@ export async function loadShop({ silent = true } = {}) {
     if (!silent) toast(t('msg.shopLoadFail'), 'bad');
   }
   return state;
+}
+
+/**
+ * O'yinchining o'zi yig'gan to'plamini tiklaydi.
+ *
+ * Serverdagi tanlov boshlang'ich holatga qaytib qolishi mumkin (masalan baza
+ * eski zaxiradan tiklangan bo'lsa). Shunda brauzerda saqlangan tanlovni
+ * qaytarib qo'yamiz — o'yinchi har safar qaytadan tanlab o'tirmasin.
+ *
+ * Ehtiyot chorasi: faqat serverda boshlang'ich variant turgan va narsa
+ * haqiqatan o'yinchida bor bo'lgan bo'limlar tiklanadi.
+ */
+async function restoreOwnChoice() {
+  const saved = loadLocalEquipped();
+  const def = defaultEquipped();
+  const fix = SLOTS.filter((slot) => {
+    const want = saved[slot];
+    return want && want !== state.equipped[slot] && state.equipped[slot] === def[slot] && owns(want);
+  });
+  if (!fix.length) return;
+
+  for (const slot of fix) {
+    try {
+      const res = await fetch('/api/shop/equip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initData: initData(), slot, itemId: saved[slot] }),
+      });
+      if (!res.ok) continue;
+      const data = await res.json();
+      state.equipped = { ...defaultEquipped(), ...data.equipped };
+    } catch {
+      /* tarmoq yo'q bo'lsa keyingi ochilishda qayta urinadi */
+    }
+  }
 }
 
 // ---------------------------------------------------------------- ko'rinish
@@ -196,9 +233,8 @@ export async function equipSet(itemId) {
     } catch (err) {
       toast(err.message || t('msg.wearFail'), 'bad');
     }
-  } else {
-    saveLocalEquipped();
   }
+  saveLocalEquipped(); // tanlov brauzerda ham qoladi
 
   onChange(state.equipped);
   renderShop();
@@ -276,9 +312,8 @@ export async function equip(slot, itemId) {
     } catch (err) {
       toast(err.message || t('msg.wearFail'), 'bad');
     }
-  } else {
-    saveLocalEquipped();
   }
+  saveLocalEquipped(); // tanlov brauzerda ham qoladi
 
   onChange(state.equipped);
   renderShop();

@@ -137,11 +137,20 @@ test('server qayta ishga tushganda ma\'lumot Telegram zaxirasidan tiklanadi', as
   try {
     await post('/api/shop/profile', { initData });
     await admin('/api/admin/grant', { tgId: '4242', itemId: 'bundle-afsona' });
+    // Donalab berilgan ko'rinishlar ham bo'lsin — o'yinchi ulardan aralash to'plam yig'adi
+    await admin('/api/admin/grant', { tgId: '4242', itemId: 'token-star' });
+    await admin('/api/admin/grant', { tgId: '4242', itemId: 'snake-electric' });
     await admin('/api/admin/price', { itemId: 'token-crown', stars: 333 });
+
+    // O'yinchi o'zi yig'gan aralash to'plam
+    await post('/api/shop/equip', { initData, slot: 'token', itemId: 'token-star' });
+    await post('/api/shop/equip', { initData, slot: 'snake', itemId: 'snake-electric' });
 
     const before = await (await post('/api/shop/profile', { initData })).json();
     assert.ok(before.owned.includes('token-crown'));
     assert.equal(before.equipped.board, 'board-oltin');
+    assert.equal(before.equipped.token, 'token-star');
+    assert.equal(before.equipped.snake, 'snake-electric');
 
     // Qo'lda zaxiralaymiz (avtomatik yuborish kechiktiriladi)
     const saved = await (await admin('/api/admin/backup', {})).json();
@@ -156,8 +165,15 @@ test('server qayta ishga tushganda ma\'lumot Telegram zaxirasidan tiklanadi', as
   server = await startServer({ port: PORT, dataDir: dirTwo, tgPort: tg.port() });
   try {
     const after = await (await post('/api/shop/profile', { initData })).json();
-    assert.ok(after.owned.includes('token-crown'), 'sovg\'a qaytib keldi');
-    assert.equal(after.equipped.board, 'board-oltin', 'kiyimi ham saqlanib qoldi');
+    assert.ok(after.owned.includes('token-crown'), 'to\'plamdagi sovg\'a qaytib keldi');
+    assert.ok(after.owned.includes('token-star'), 'donalab berilgani ham qaytdi');
+    assert.ok(after.owned.includes('snake-electric'), 'donalab berilgani ham qaytdi');
+    // Eng muhimi: o'yinchi o'zi yig'gan aralash to'plam o'z holicha turibdi
+    assert.deepEqual(
+      { token: after.equipped.token, snake: after.equipped.snake, ladder: after.equipped.ladder, board: after.equipped.board },
+      { token: 'token-star', snake: 'snake-electric', ladder: 'ladder-gold', board: 'board-oltin' },
+      'o\'zi tanlagan to\'plam qayta tanlashsiz saqlanib qoladi',
+    );
 
     const catalog = await (await fetch(`${base}/api/catalog`)).json();
     assert.equal(catalog.items.find((i) => i.id === 'token-crown').price, 333, 'narxlar ham tiklandi');
