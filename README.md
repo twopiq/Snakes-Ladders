@@ -196,8 +196,8 @@ o'ziga** zaxiralash mumkin: bot faylni belgilangan chatga yuborib, o'sha xabarni
 pin qiladi; server qayta ishga tushganda bazasi bo'sh bo'lsa shundan tiklaydi.
 
 Yoqish (o'yin egasi uchun **bir martalik** sozlama — o'yinchilar hech nima
-qilmaydi): botga `/id` yozib chat raqamingizni oling va uni `BACKUP_CHAT_ID`
-sozlamasiga qo'ying. Tafsilotlar: [docs/monetizatsiya.md](docs/monetizatsiya.md).
+qilmaydi): Telegram chat raqamingizni `BACKUP_CHAT_ID` sozlamasiga qo'ying.
+Tafsilotlar: [docs/monetizatsiya.md](docs/monetizatsiya.md).
 
 Qo'shimcha himoya: o'yinchi tanlagan ko'rinishlar to'plami brauzerda ham
 saqlanadi. Serverdagi tanlov boshlang'ich holatga qaytib qolsa (masalan eski

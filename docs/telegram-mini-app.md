@@ -47,7 +47,7 @@ Render'da: **Dashboard → xizmatingiz → Environment → Add Environment Varia
 | `BOT_TOKEN` | BotFather bergan token | O'yinchi haqiqatan o'sha Telegram foydalanuvchisi ekanini tekshirish |
 | `BOT_USERNAME` | `ilonlar_narvonlar_bot` | Taklif havolasini yasash uchun (bot ulangan bo'lsa server uni o'zi ham topadi) |
 | `APP_SHORT_NAME` | `oyin` | 2-bosqichdagi "Short name". Berilmasa havolalar bot chati orqali ochiladi |
-| `BACKUP_CHAT_ID` | botga `/id` yozib olingan raqam | **Bazani Telegram'ga zaxiralaydi** — server qayta ishga tushganda ma'lumot shundan tiklanadi |
+| `BACKUP_CHAT_ID` | Telegram chat raqamingiz ([@userinfobot](https://t.me/userinfobot) aytadi) | **Bazani Telegram'ga zaxiralaydi** — server qayta ishga tushganda ma'lumot shundan tiklanadi |
 | `DATA_DIR` | doimiy disk yo'li | Xaridlar va do'st hisobi shu yerda saqlanadi (pullik tarifdagi disk uchun) |
 
 Saqlagach Render xizmatni qayta ishga tushiradi. Tekshirish:

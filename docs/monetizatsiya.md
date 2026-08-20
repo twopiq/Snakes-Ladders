@@ -56,8 +56,12 @@ tiklaydi. Hech qanday qo'shimcha xizmat, ro'yxatdan o'tish yoki to'lov kerak ema
 
 Sozlash ikki qadam:
 
-1. **O'zingiz** botga **`/id`** deb yozing — u sizga chat raqamingizni qaytaradi.
+1. Telegram chat raqamingizni bilib oling. Eng oson yo'li — [@userinfobot](https://t.me/userinfobot)
+   ga bir marta yozish: u `Id: 987654321` deb javob beradi. (Ilovaga kirgan bo'lsangiz,
+   raqam `/admin` → "O'yinchilar" ro'yxatida ismingiz yonida ham turadi.)
 2. Render → Environment → `BACKUP_CHAT_ID` ga o'sha raqamni qo'ying va saqlang.
+   Botni bir marta `/start` bilan ochgan bo'lishingiz kerak — aks holda bot sizga
+   fayl yubora olmaydi.
 
 Tekshirish: `/admin` → "Telegram holati" da **"Telegram zaxirasi"** qatori yashil
 bo'lishi kerak. O'sha yerdagi "Zaxira nusxa" bo'limida qo'lda ham zaxiralash va

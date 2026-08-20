@@ -489,12 +489,6 @@ const T = {
   'bot.cmdHelp': { uz: 'Qoidalar', ru: 'Правила', en: 'Rules' },
   'bot.cmdSupport': { uz: "Xarid bo'yicha yordam", ru: 'Помощь с покупкой', en: 'Purchase support' },
   'bot.menuButton': { uz: "O'ynash", ru: 'Играть', en: 'Play' },
-  'bot.yourId': { uz: 'Sizning Telegram ID raqamingiz:', ru: 'Ваш Telegram ID:', en: 'Your Telegram ID:' },
-  'bot.idHint': {
-    uz: "Bu raqam serverdagi BACKUP_CHAT_ID sozlamasi uchun kerak bo'ladi.",
-    ru: 'Этот номер понадобится для настройки BACKUP_CHAT_ID на сервере.',
-    en: 'You will need this number for the BACKUP_CHAT_ID setting on the server.',
-  },
 
   // ---------------------------------------------------------------- nodirlik va bo'limlar
   'rarity.free': { uz: 'Bepul', ru: 'Бесплатно', en: 'Free' },
