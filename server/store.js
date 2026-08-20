@@ -23,7 +23,23 @@ export class Store {
     this.file = file;
     this.data = structuredClone(EMPTY);
     this.timer = null;
+    /** Har saqlashdan keyin chaqiriladi (Telegram zaxirasi shunga ulanadi). */
+    this.afterSave = null;
     this.load();
+  }
+
+  /** Ma'lumot umuman yo'qmi? (zaxiradan tiklash shu holatda qilinadi) */
+  get isEmpty() {
+    return Object.keys(this.data.users).length === 0 && this.data.purchases.length === 0;
+  }
+
+  /** Butun bazani almashtiradi (zaxiradan tiklashda). */
+  replaceAll(data) {
+    if (!data || typeof data !== 'object' || !data.users) return { ok: false, error: 'Zaxira formati noto\'g\'ri' };
+    this.data = { ...structuredClone(EMPTY), ...data };
+    if (!Array.isArray(this.data.gifts)) this.data.gifts = [];
+    this.saveNow({ backup: false }); // tiklangan nusxani qaytadan yuborish shart emas
+    return { ok: true, users: Object.keys(this.data.users).length };
   }
 
   load() {
@@ -47,7 +63,7 @@ export class Store {
     this.timer.unref?.();
   }
 
-  saveNow() {
+  saveNow({ backup = true } = {}) {
     try {
       fs.mkdirSync(path.dirname(this.file), { recursive: true });
       this.data.updatedAt = new Date().toISOString();
@@ -56,6 +72,13 @@ export class Store {
       fs.renameSync(tmp, this.file);
     } catch (err) {
       console.error('store yozib bo\'lmadi:', err.message);
+    }
+    if (backup) {
+      try {
+        this.afterSave?.();
+      } catch {
+        /* zaxira ishlamasa ham o'yin to'xtamaydi */
+      }
     }
   }
 

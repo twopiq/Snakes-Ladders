@@ -8,6 +8,7 @@ import { RoomStore } from './rooms.js';
 import { telegramConfig, telegramEnabled, resolveIdentity, verifyInitData, botToken, reasonText, referralLink } from './telegram.js';
 import { Store } from './store.js';
 import { createBot } from './bot.js';
+import { createBackup } from './backup.js';
 import { MAPS } from '../public/shared/maps.js';
 import { COSMETICS, getItem } from '../public/shared/cosmetics.js';
 import { t, itemText } from '../public/shared/i18n.js';
@@ -26,6 +27,16 @@ const bot = telegramEnabled && process.env.DISABLE_BOT !== '1'
   ? createBot({ token: botToken(), store: shop, webappUrl: WEBAPP_URL })
   : null;
 bot?.start();
+
+/**
+ * Zaxira: Render bepul tarifida disk vaqtinchalik, shuning uchun bazani
+ * Telegram'ning o'ziga ham yozib qo'yamiz (docs/monetizatsiya.md ga qarang).
+ */
+const BACKUP_CHAT_ID = (process.env.BACKUP_CHAT_ID || '').trim();
+const backup = telegramEnabled && BACKUP_CHAT_ID
+  ? createBackup({ token: botToken(), store: shop, chatId: BACKUP_CHAT_ID })
+  : null;
+if (backup) shop.afterSave = () => backup.schedule();
 
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://localhost');
@@ -423,6 +434,7 @@ async function handleApi(req, res, url) {
           file: shop.file,
           // DATA_DIR berilmasa fayl loyiha ichida turadi — Render'da har deploydan keyin o'chadi
           persistent: Boolean(process.env.DATA_DIR),
+          backup: backup ? backup.status() : { enabled: false },
         },
         telegram: {
           tokenSet: telegramEnabled,
@@ -449,6 +461,11 @@ async function handleApi(req, res, url) {
     }
     if (path === '/api/admin/disabled') {
       const result = shop.setDisabled(body.itemId, Boolean(body.disabled));
+      return json(res, result.ok ? 200 : 400, result);
+    }
+    if (path === '/api/admin/backup') {
+      if (!backup) return json(res, 503, { error: 'BACKUP_CHAT_ID sozlanmagan' });
+      const result = body.restore ? await backup.restore() : await backup.save();
       return json(res, result.ok ? 200 : 400, result);
     }
     if (path === '/api/admin/users') {
@@ -587,6 +604,10 @@ const heartbeat = setInterval(() => {
 }, 25_000);
 
 wss.on('close', () => clearInterval(heartbeat));
+
+// Baza bo'sh bo'lsa (yangi konteyner) — avval zaxiradan tiklaymiz,
+// shundan keyingina so'rovlarni qabul qilamiz.
+if (backup && shop.isEmpty) await backup.restore();
 
 server.listen(PORT, HOST, () => {
   console.log(`Ilonlar va Narvonlar → http://localhost:${PORT}`);

@@ -143,9 +143,17 @@ function renderDiagnostics(tg = {}, starsEnabled, storage = {}) {
     : ['bad', "Stars to'lovi", "o'chiq (BOT_TOKEN yoki bot ulanmagan)"]);
   rows.push(storage.persistent
     ? ['ok', 'Ma\'lumot saqlanishi', `DATA_DIR: ${esc(storage.file || '')}`]
-    : ['bad', 'Ma\'lumot saqlanishi',
-       "DATA_DIR sozlanmagan — Render bepul tarifida har deploy/qayta ishga tushishdan keyin "
-       + "xaridlar va do'st hisobi <b>o'chib ketadi</b>. Doimiy disk ulab, DATA_DIR ni ko'rsating."]);
+    : ['warn', 'Ma\'lumot saqlanishi',
+       "DATA_DIR sozlanmagan — disk vaqtinchalik. Doimiy disk ulasangiz DATA_DIR ni ko'rsating "
+       + "yoki pastdagi Telegram zaxirasini yoqing."]);
+
+  const bk = storage.backup || {};
+  rows.push(bk.enabled
+    ? [bk.error ? 'warn' : 'ok', 'Telegram zaxirasi',
+       `chat <code>${esc(bk.chatId)}</code> · ${bk.lastAt ? `oxirgi nusxa: ${new Date(bk.lastAt).toLocaleString('uz')}` : 'hali yuborilmagan'}${bk.error ? ` · <b>${esc(bk.error)}</b>` : ''}`]
+    : ['bad', 'Telegram zaxirasi',
+       "o'chiq — BACKUP_CHAT_ID sozlanmagan. Yoqilmasa, server qayta ishga tushganda "
+       + "xaridlar va do'st hisobi <b>o'chib ketadi</b>. Botga /id yozib chat raqamingizni oling."]);
 
   box.innerHTML = `<h3>Telegram holati</h3>` + rows.map(([k, name, val]) => `
     <div class="diag-row ${k}">
@@ -244,6 +252,22 @@ async function gift() {
 }
 
 function bind() {
+  for (const btn of document.querySelectorAll('[data-backup]')) {
+    btn.addEventListener('click', async () => {
+      const restore = btn.dataset.backup === 'restore';
+      if (restore && !confirm('Zaxiradagi nusxa hozirgi ma\'lumotlarni almashtiradi. Davom etamizmi?')) return;
+      btn.disabled = true;
+      try {
+        const res = await api('/api/admin/backup', { restore });
+        toast(restore ? `Tiklandi: ${res.users} ta o'yinchi` : 'Zaxira yuborildi');
+        refresh();
+      } catch (err) {
+        toast(err.message, 'bad');
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  }
   for (const btn of document.querySelectorAll('[data-pick]')) {
     btn.addEventListener('click', () => {
       $('#giftId').value = btn.dataset.pick;

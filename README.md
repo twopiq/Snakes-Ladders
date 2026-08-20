@@ -188,6 +188,16 @@ Ko'p kishilik xonada ekran serverdan orqada qolmasligi uchun:
   faqat o'z `seat`i qo'shiladi) va zar xabariga chat tarixini qo'shmaydi;
 - WebSocket ulanishida Nagle algoritmi o'chirilgan — kichik xabarlar kutib turmaydi.
 
+## Ma'lumot saqlanishi
+
+Xaridlar, do'st hisobi va sovg'alar `DATA_DIR/store.json` faylida turadi.
+Render'ning bepul tarifida disk vaqtinchalik — shuning uchun bazani **Telegram'ning
+o'ziga** zaxiralash mumkin: bot faylni belgilangan chatga yuborib, o'sha xabarni
+pin qiladi; server qayta ishga tushganda bazasi bo'sh bo'lsa shundan tiklaydi.
+
+Yoqish: botga `/id` yozib chat raqamingizni oling va uni `BACKUP_CHAT_ID`
+sozlamasiga qo'ying. Tafsilotlar: [docs/monetizatsiya.md](docs/monetizatsiya.md).
+
 ## Admin paneli
 
 `/admin` manzilida (kirish uchun `ADMIN_PASSWORD` kerak):
@@ -196,7 +206,8 @@ Ko'p kishilik xonada ekran serverdan orqada qolmasligi uchun:
 - Telegram sozlamalari diagnostikasi (token, bot nomi, taklif havolasi, ma'lumot saqlanishi);
 - **istalgan ko'rinishni Telegram foydalanuvchisiga bepul berish** va kerak bo'lsa qaytarib olish;
 - o'yinchilar ro'yxati (ism/ID bo'yicha qidiruv) va do'st chaqirish hisobi;
-- xaridlar tarixi va yulduzlarni qaytarish.
+- xaridlar tarixi va yulduzlarni qaytarish;
+- Telegram zaxirasini qo'lda olish va undan tiklash.
 
 ## Boshqaruv
 

@@ -44,15 +44,40 @@ Xaridlar oddiy JSON faylda (`DATA_DIR/store.json`) saqlanadi. **Render'ning bepu
 tarifida disk vaqtinchalik**: har deploydan yoki qayta ishga tushishdan keyin fayl
 yo'qoladi — ya'ni odamlar pul to'lab olgan narsalari yo'qoladi.
 
-Haqiqiy sotuvni boshlashdan **oldin** quyidagilardan birini qiling:
+### Yechim 1 — Telegram zaxirasi (bepul tarifda ham ishlaydi) ✅
 
-1. **Render Disk** ulang (Starter tarif): Dashboard → xizmat → Disks → Add Disk,
-   Mount Path masalan `/var/data`, so'ng `DATA_DIR=/var/data` qilib qo'ying.
-2. Yoki `server/store.js` ni tashqi bazaga (Postgres, Redis) o'tkazing — undagi
-   metodlar (`user`, `grant`, `equip`, `recordPurchase`, `price`) shu maqsadda
-   ajratib yozilgan.
+Bot bazani **Telegram'ning o'ziga** hujjat qilib yuboradi va o'sha xabarni pin
+qiladi. Server qayta ishga tushganda bazasi bo'sh bo'lsa — o'sha nusxadan
+tiklaydi. Hech qanday qo'shimcha xizmat, ro'yxatdan o'tish yoki to'lov kerak emas.
 
-Sinov uchun bepul tarif ham bo'ladi, lekin pul olishdan oldin buni hal qiling.
+Sozlash ikki qadam:
+
+1. Botga **`/id`** deb yozing — u sizga chat raqamingizni qaytaradi.
+2. Render → Environment → `BACKUP_CHAT_ID` ga o'sha raqamni qo'ying va saqlang.
+
+Tekshirish: `/admin` → "Telegram holati" da **"Telegram zaxirasi"** qatori yashil
+bo'lishi kerak. O'sha yerdagi "Zaxira nusxa" bo'limida qo'lda ham zaxiralash va
+tiklash tugmalari bor.
+
+Qanday ishlaydi:
+
+- har o'zgarishdan keyin nusxa yuboriladi (ketma-ket o'zgarishlar birlashtiriladi,
+  eng ko'pi 5 daqiqada bir marta — Telegram bezovta bo'lmasin);
+- faqat **eng oxirgi** nusxa pin qilingan bo'ladi, tiklashda shundan olinadi;
+- tiklash faqat baza **bo'sh** bo'lganda bajariladi, ya'ni ishlab turgan
+  server ustiga eski nusxa yozilib ketmaydi;
+- pin qilingan xabarni o'chirmang — u zaxiraning o'zi.
+
+### Yechim 2 — Render Disk (pullik tarif)
+
+Dashboard → xizmat → Disks → Add Disk, Mount Path masalan `/var/data`, so'ng
+`DATA_DIR=/var/data` qilib qo'ying. Ikkalasini birga ishlatsa ham bo'ladi:
+disk asosiy, Telegram esa zaxira nusxa bo'lib qoladi.
+
+### Yechim 3 — tashqi baza
+
+`server/store.js` ni Postgres yoki Redis'ga o'tkazing — undagi metodlar
+(`user`, `grant`, `equip`, `recordPurchase`, `price`) shu maqsadda ajratib yozilgan.
 
 ## Narxlarni o'zgartirish
 

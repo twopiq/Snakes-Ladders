@@ -205,6 +205,17 @@ export function createBot({ token, store, webappUrl = '' }) {
       return;
     }
 
+    // Zaxira sozlash uchun chat raqamini bilish kerak bo'ladi
+    if (text.startsWith('/id')) {
+      const lang = langOf(msg.from);
+      await call('sendMessage', {
+        chat_id: chatId,
+        parse_mode: 'HTML',
+        text: [t('bot.yourId', null, lang), `<code>${chatId}</code>`, '', t('bot.idHint', null, lang)].join('\n'),
+      }).catch(() => {});
+      return;
+    }
+
     if (text.startsWith('/support') || text.startsWith('/refund')) {
       await call('sendMessage', {
         chat_id: chatId,
