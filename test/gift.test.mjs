@@ -184,3 +184,76 @@ test('admin API: sovg\'a berish va qaytarib olish', async (t) => {
   const saved = JSON.parse(fs.readFileSync(path.join(dataDir, 'store.json'), 'utf8'));
   assert.ok(saved.gifts.length >= 2);
 });
+
+// ---------------------------------------------------------------- o'zi kiyilishi
+
+test("yangi ochilgan ko'rinish o'zi kiyiladi", () => {
+  const s = tmpStore();
+  s.giftItem('900', 'token-crown');
+  assert.equal(s.user('900').equipped.token, 'token-crown', "sovg'a darhol kiyiladi");
+});
+
+test("to'plam sovg'a qilinsa to'rttala bo'lim ham to'ladi", () => {
+  const s = tmpStore();
+  s.giftItem('901', 'bundle-afsona');
+  const eq = s.user('901').equipped;
+  for (const id of getItem('bundle-afsona').grants) {
+    assert.equal(eq[getItem(id).slot], id, `${id} kiyilishi kerak`);
+  }
+});
+
+test("o'yinchi tanlagan ko'rinish yangi sovg'a bilan almashmaydi", () => {
+  const s = tmpStore();
+  s.giftItem('902', 'token-star');
+  assert.equal(s.user('902').equipped.token, 'token-star');
+
+  // Endi boshqa fishka beriladi — tanlab qo'yilgani joyida qoladi
+  s.giftItem('902', 'token-crown');
+  assert.equal(s.user('902').equipped.token, 'token-star', "o'z tanloviga tegilmaydi");
+  assert.ok(s.owns('902', 'token-crown'), 'lekin yangi narsa ochiladi');
+});
+
+test("avval olingan to'plam bir marta kiydiriladi", () => {
+  const s = tmpStore();
+  // Eski holat: narsalar bor, lekin hech nima kiyilmagan (tuzatishdan oldingi xarid)
+  const u = s.user('903');
+  u.owned.push(...getItem('bundle-afsona').grants, 'bundle-afsona');
+  assert.equal(u.equipped.token, 'token-classic');
+
+  const worn = s.applyOwnedBundles('903');
+  assert.equal(worn.length, 4);
+  assert.equal(s.user('903').equipped.token, 'token-crown');
+  assert.equal(s.user('903').equipped.board, 'board-oltin');
+
+  // Ikkinchi marta ishlamaydi — o'yinchi keyin boshqasini tanlasa ham
+  s.equip('903', 'token', 'token-classic');
+  assert.deepEqual(s.applyOwnedBundles('903'), []);
+  assert.equal(s.user('903').equipped.token, 'token-classic');
+});
+
+test("API: sovg'a bo'sh bo'limga o'zi kiyiladi, tanlanganiga tegmaydi", async (t) => {
+  await startServer();
+  t.after(() => server.kill());
+
+  const initData = makeInitData({ user: { id: 9090, first_name: 'Eski' } });
+  await post('/api/shop/profile', { initData });
+
+  // To'plam berilsa to'rttala bo'lim ham to'ladi
+  await admin('/api/admin/grant', { tgId: '9090', itemId: 'bundle-boshlash' });
+  const afterBundle = await (await post('/api/shop/profile', { initData })).json();
+  assert.equal(afterBundle.equipped.token, 'token-ring');
+  assert.equal(afterBundle.equipped.ladder, 'ladder-rope');
+  assert.equal(afterBundle.equipped.snake, 'snake-candy');
+  assert.equal(afterBundle.equipped.board, 'board-papirus');
+
+  // Narvonni boshlang'ichga qaytaramiz — endi u "bo'sh" hisoblanadi
+  await post('/api/shop/equip', { initData, slot: 'ladder', itemId: 'ladder-wood' });
+
+  await admin('/api/admin/grant', { tgId: '9090', itemId: 'ladder-crystal' });
+  await admin('/api/admin/grant', { tgId: '9090', itemId: 'token-crown' });
+
+  const after = await (await post('/api/shop/profile', { initData })).json();
+  assert.equal(after.equipped.ladder, 'ladder-crystal', "bo'sh bo'limga o'zi kiyiladi");
+  assert.equal(after.equipped.token, 'token-ring', "tanlab qo'yilgani joyida qoladi");
+  assert.ok(after.owned.includes('token-crown'), 'yangi narsa baribir ochiladi');
+});

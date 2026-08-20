@@ -508,6 +508,8 @@ async function handleApi(req, res, url) {
   if (path === '/api/shop/profile') {
     // Taklif havolasi orqali kirgan bo'lsa (startapp=r<id>) — chaqiruvchiga bog'laymiz
     const ref = attachRef(body, who.tgId);
+    // Eski xarid/sovg'alar uchun bir martalik tuzatish
+    shop.applyOwnedBundles(who.tgId);
 
     const user = shop.user(who.tgId);
     return json(res, 200, {

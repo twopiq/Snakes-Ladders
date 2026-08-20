@@ -11,7 +11,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { getItem, grantsOf, freeItems, defaultEquipped, SLOTS, REFERRAL_TIERS } from '../public/shared/cosmetics.js';
+import { COSMETICS, getItem, grantsOf, freeItems, defaultEquipped, SLOTS, REFERRAL_TIERS } from '../public/shared/cosmetics.js';
 
 const DATA_DIR = process.env.DATA_DIR || path.resolve(process.cwd(), 'data');
 const FILE = path.join(DATA_DIR, 'store.json');
@@ -246,8 +246,54 @@ export class Store {
         added++;
       }
     }
+    // Yangi ochilgan narsa darhol kiyiladi — o'yinchi uni qidirib yurmasin
+    if (added) this.equipIfDefault(tgId, itemId);
     this.saveSoon();
     return added;
+  }
+
+  /**
+   * Yangi ochilgan ko'rinishni kiydiradi — lekin faqat o'sha bo'limda hali
+   * boshlang'ich variant turgan bo'lsa.
+   *
+   * Shu qoida tufayli xarid, sovg'a yoki mukofot "ishlamagandek" tuyulmaydi
+   * (darhol ko'rinadi), lekin o'yinchi ataylab tanlab qo'ygan ko'rinish
+   * hech qachon o'zgarib ketmaydi.
+   */
+  equipIfDefault(tgId, itemId) {
+    const def = defaultEquipped();
+    const u = this.user(tgId);
+    const worn = [];
+    for (const id of grantsOf(itemId)) {
+      const part = getItem(id);
+      if (!part || !SLOTS.includes(part.slot)) continue; // to'plamning o'zi kiyilmaydi
+      if (!u.owned.includes(id)) continue;
+      if (u.equipped[part.slot] !== def[part.slot]) continue; // o'z tanloviga tegmaymiz
+      u.equipped[part.slot] = id;
+      worn.push(id);
+    }
+    if (worn.length) this.saveSoon();
+    return worn;
+  }
+
+  /**
+   * Bir martalik tuzatish: avvalroq olingan to'plamlar hech qayerga
+   * kiyilmagan bo'lsa, bo'sh (boshlang'ich) bo'limlarga kiydiriladi.
+   *
+   * Bu qoida "yangi narsa o'zi kiyiladi" qoidasidan oldin olingan xarid va
+   * sovg'alar uchun kerak. Har bir o'yinchi uchun faqat bir marta bajariladi.
+   */
+  applyOwnedBundles(tgId) {
+    const u = this.user(tgId);
+    if (u.bundlesApplied) return [];
+    u.bundlesApplied = true;
+    const worn = [];
+    for (const item of COSMETICS) {
+      if (item.slot !== 'bundle' || !u.owned.includes(item.id)) continue;
+      worn.push(...this.equipIfDefault(tgId, item.id));
+    }
+    this.saveSoon();
+    return worn;
   }
 
   /**
