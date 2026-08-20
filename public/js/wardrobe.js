@@ -34,12 +34,15 @@ export function renderWardrobe() {
   const bySlot = (slot) => items.filter((i) => i.slot === slot && owned.has(i.id));
   const bundles = items.filter((i) => i.slot === 'bundle' && owned.has(i.id));
   const total = SLOTS.reduce((n, slot) => n + bySlot(slot).length, 0);
+  // Faqat boshlang'ich variantlar bo'lsa bo'limlarni takrorlamaymiz —
+  // ular yuqoridagi "hozir kiyilgan" qatorida allaqachon ko'rinib turibdi
+  const onlyStarters = total <= SLOTS.length;
 
   root.innerHTML = `
     ${wornHtml(state)}
-    ${SLOTS.map((slot) => groupHtml(slot, bySlot(slot), state)).join('')}
+    ${onlyStarters ? '' : SLOTS.map((slot) => groupHtml(slot, bySlot(slot), state)).join('')}
     ${bundles.length ? bundlesHtml(bundles, state) : ''}
-    ${hintHtml(total)}`;
+    ${hintHtml(onlyStarters)}`;
 
   for (const el of root.querySelectorAll('[data-wear]')) {
     el.addEventListener('click', async () => {
@@ -127,8 +130,7 @@ function bundlesHtml(bundles, state) {
 }
 
 /** Faqat boshlang'ich variantlar bo'lsa — qayerdan yangisini olish mumkinligi. */
-function hintHtml(total) {
-  const onlyStarters = total <= SLOTS.length;
+function hintHtml(onlyStarters) {
   if (!onlyStarters) {
     return `
       <p class="muted" style="text-align:center">

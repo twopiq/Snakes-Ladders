@@ -8,13 +8,22 @@ import { resolveStyles } from '../shared/cosmetics.js';
 const TAU = Math.PI * 2;
 
 export class Board {
-  constructor(canvas, map) {
+  /**
+   * options.cell — katak o'lchami piksellarda. Berilsa taxta oyna o'lchamiga
+   *   moslashmaydi, aynan shu o'lchamda chiziladi (do'kondagi kichik namunalar).
+   * options.pad — chekka bo'shlig'i.
+   * options.labels — raqam va belgilarni chizishmi.
+   */
+  constructor(canvas, map, { cell = null, pad = null, labels = true, ends = true } = {}) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
     this.players = [];
     this.tokens = new Map(); // playerId -> {cell, x, y}
     this.highlight = null;
-    this.showLabels = true; // do'kondagi kichik namunalarda o'chiriladi
+    this.fixedCell = cell;
+    this.fixedPad = pad;
+    this.showLabels = labels; // do'kondagi kichik namunalarda o'chiriladi
+    this.showEnds = ends;     // birinchi va oxirgi katakning alohida rangi
     this.rafOk = true; // animatsiya kadrlari kelayaptimi (fon rejimida kelmaydi)
     this.skins = resolveStyles({});
     // Statik qatlam: kataklar, narvon/ilonlar va raqamlar shu yerda bir marta
@@ -74,6 +83,7 @@ export class Board {
   }
 
   resize() {
+    if (this.fixedCell) return this.resizeFixed();
     const wrap = this.canvas.parentElement;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     this.dpr = dpr;
@@ -112,6 +122,29 @@ export class Board {
       const c = this.cellCenter(tok.cell);
       this.tokens.set(id, { ...tok, x: c.x, y: c.y });
     }
+    this.draw();
+  }
+
+  /** Aniq o'lchamli taxta (namunalar uchun) — oyna kengligiga bog'liq emas. */
+  resizeFixed() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    this.dpr = dpr;
+    this.cell = this.fixedCell;
+    this.pad = this.fixedPad ?? 4;
+
+    const w = this.cell * this.map.cols + this.pad * 2;
+    const h = this.cell * this.map.rows + this.pad * 2;
+    this.canvas.style.width = `${w}px`;
+    this.canvas.style.height = `${h}px`;
+    this.canvas.width = Math.round(w * dpr);
+    this.canvas.height = Math.round(h * dpr);
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    for (const [id, tok] of this.tokens) {
+      const c = this.cellCenter(tok.cell);
+      this.tokens.set(id, { ...tok, x: c.x, y: c.y });
+    }
+    this.invalidate();
     this.draw();
   }
 
@@ -223,7 +256,7 @@ export class Board {
       ctx.fillStyle = (col + row) % 2 === 0 ? th.light : th.dark;
       ctx.fillRect(r.x, r.y, r.w, r.h);
 
-      if (cell === 1 || cell === this.size) {
+      if (this.showEnds && (cell === 1 || cell === this.size)) {
         ctx.fillStyle = cell === 1 ? 'rgba(14,165,233,.30)' : 'rgba(250,204,21,.45)';
         ctx.fillRect(r.x, r.y, r.w, r.h);
       } else if (bonus.has(cell)) {
