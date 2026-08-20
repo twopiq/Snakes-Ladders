@@ -195,7 +195,8 @@ Render'ning bepul tarifida disk vaqtinchalik — shuning uchun bazani **Telegram
 o'ziga** zaxiralash mumkin: bot faylni belgilangan chatga yuborib, o'sha xabarni
 pin qiladi; server qayta ishga tushganda bazasi bo'sh bo'lsa shundan tiklaydi.
 
-Yoqish: botga `/id` yozib chat raqamingizni oling va uni `BACKUP_CHAT_ID`
+Yoqish (o'yin egasi uchun **bir martalik** sozlama — o'yinchilar hech nima
+qilmaydi): botga `/id` yozib chat raqamingizni oling va uni `BACKUP_CHAT_ID`
 sozlamasiga qo'ying. Tafsilotlar: [docs/monetizatsiya.md](docs/monetizatsiya.md).
 
 Qo'shimcha himoya: o'yinchi tanlagan ko'rinishlar to'plami brauzerda ham

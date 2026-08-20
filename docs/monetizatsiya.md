@@ -50,9 +50,13 @@ Bot bazani **Telegram'ning o'ziga** hujjat qilib yuboradi va o'sha xabarni pin
 qiladi. Server qayta ishga tushganda bazasi bo'sh bo'lsa — o'sha nusxadan
 tiklaydi. Hech qanday qo'shimcha xizmat, ro'yxatdan o'tish yoki to'lov kerak emas.
 
+> **Bu faqat siz — o'yin egasi uchun, bir martalik sozlama.** O'yinchilar hech
+> nima qilmaydi va bu haqda bilmaydi ham: zaxirada barcha o'yinchilarning
+> ma'lumoti bitta faylda, bitta chatga yuboriladi.
+
 Sozlash ikki qadam:
 
-1. Botga **`/id`** deb yozing — u sizga chat raqamingizni qaytaradi.
+1. **O'zingiz** botga **`/id`** deb yozing — u sizga chat raqamingizni qaytaradi.
 2. Render → Environment → `BACKUP_CHAT_ID` ga o'sha raqamni qo'ying va saqlang.
 
 Tekshirish: `/admin` → "Telegram holati" da **"Telegram zaxirasi"** qatori yashil
@@ -61,8 +65,10 @@ tiklash tugmalari bor.
 
 Qanday ishlaydi:
 
+- nusxada **barcha o'yinchilar** bir joyda: xaridlar, sovg'alar, do'st hisobi,
+  kiyilgan ko'rinishlar va narxlar;
 - har o'zgarishdan keyin nusxa yuboriladi (ketma-ket o'zgarishlar birlashtiriladi,
-  eng ko'pi 5 daqiqada bir marta — Telegram bezovta bo'lmasin);
+  daqiqada bir martadan tez emas — Telegram bezovta bo'lmasin);
 - faqat **eng oxirgi** nusxa pin qilingan bo'ladi, tiklashda shundan olinadi;
 - tiklash faqat baza **bo'sh** bo'lganda bajariladi, ya'ni ishlab turgan
   server ustiga eski nusxa yozilib ketmaydi;
